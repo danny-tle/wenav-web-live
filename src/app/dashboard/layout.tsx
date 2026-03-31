@@ -1,8 +1,8 @@
 "use client";
 
 import { AuthGuard } from "@/lib/auth";
-import Sidebar from "@/components/dashboard/Sidebar";
-import DashboardTopbar from "@/components/dashboard/DashboardTopbar";
+import UserSidebar from "@/components/user/UserSidebar";
+import DashboardTopbar from "@/components/shared/DashboardTopbar";
 
 export default function DashboardLayout({
   children,
@@ -14,7 +14,7 @@ export default function DashboardLayout({
       <div className="flex flex-col h-screen">
         <DashboardTopbar />
         <div className="flex flex-1 overflow-hidden bg-wenav-gray">
-          <Sidebar />
+          <UserSidebar />
           <main className="flex-1 overflow-auto p-6 lg:p-8">{children}</main>
         </div>
       </div>

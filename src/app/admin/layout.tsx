@@ -1,8 +1,8 @@
 "use client";
 
 import { AdminGuard } from "@/lib/auth";
-import AdminSidebar from "@/components/dashboard/AdminSidebar";
-import DashboardTopbar from "@/components/dashboard/DashboardTopbar";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import DashboardTopbar from "@/components/shared/DashboardTopbar";
 
 export default function AdminLayout({
   children,

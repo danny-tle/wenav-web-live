@@ -14,7 +14,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import NotificationPanel from "./NotificationPanel";
+import NotificationPanel from "@/components/shared/NotificationPanel";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },

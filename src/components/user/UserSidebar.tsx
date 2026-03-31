@@ -14,7 +14,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import NotificationPanel from "./NotificationPanel";
+import NotificationPanel from "@/components/shared/NotificationPanel";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function UserSidebar() {
   const pathname = usePathname();
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

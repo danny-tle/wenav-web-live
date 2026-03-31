@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 
 const AdminDashboardMap = dynamic(
-  () => import("@/components/dashboard/AdminDashboardMap"),
+  () => import("@/components/admin/AdminDashboardMap"),
   {
     ssr: false,
     loading: () => (
