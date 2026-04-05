@@ -20,17 +20,17 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     name: "Jewan Chae",
     role: "Mobile/Hardware Engineer",
-    avatar: "/assets/person1.png",
+    avatar: "/assets/person2.png",
   },
   {
     name: "Danny Le",
     role: "Mobile/Web Engineer",
-    avatar: "/assets/person2.png",
+    avatar: "/assets/person3.png",
   },
   {
     name: "Teresa Park",
     role: "UX/UI Engineer",
-    avatar: "/assets/person3.png",
+    avatar: "/assets/person1.png",
   },
   {
     name: "Ethan Nguyen",
@@ -47,33 +47,33 @@ export const TEAM_MEMBERS: TeamMember[] = [
 export const FEATURES: Feature[] = [
   {
     icon: "/assets/camera_icon.png",
-    title: "Obstacle Detection",
+    title: "Record only \n what matters.",
     description:
-      "Real-time camera-based detection of obstacles in your path using computer vision.",
+      "Capture short, video segments when incidents occur.",
   },
   {
     icon: "/assets/headset_icon.png",
-    title: "Audio Feedback",
+    title: "Stay aware of \n what’s ahead.",
     description:
-      "Voice guidance and audio alerts for safe navigation assistance.",
+      "Detect nearby obstacles and potential collision risks in real time.",
   },
   {
     icon: "/assets/notification_icon.png",
-    title: "Smart Alerts",
+    title: "Get alerted only \n when it matters.",
     description:
-      "Instant notifications for caregivers when incidents occur.",
+      "Let us guide you—quietly, intelligently, and only when needed.",
   },
   {
     icon: "/assets/share_icon.png",
-    title: "Location Sharing",
+    title: "Support multiple \n users with trust.",
     description:
-      "Share your location with trusted caregivers in real-time.",
+      "Connect with your helper to support through a role-based system.",
   },
   {
     icon: "/assets/folder_icon.png",
-    title: "Incident Reports",
+    title: "Privacy first. \n Always.",
     description:
-      "Log and track obstacles to improve community safety over time.",
+      "Ensure safety data is reviewed and approved before being shared.",
   },
 ];
 

@@ -1,37 +1,81 @@
+"use client";
+
+import { useRef } from "react";
 import Image from "next/image";
 import { FEATURES } from "@/lib/constants";
-import Card from "@/components/shared/Card";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function FeaturesSection() {
-  return (
-    <section id="features" className="py-20 bg-wenav-gray">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold text-wenav-dark text-center mb-4">
-          Features
-        </h2>
-        <p className="text-gray-500 text-center mb-12 max-w-2xl mx-auto">
-          WeNav combines real-time obstacle detection with post-incident insight
-          to keep you safe.
-        </p>
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const amount = 280;
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -amount : amount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  return (
+    <section id="features" className="py-20 bg-[#f3f3f7]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-start justify-between mb-12">
+          <div>
+            <h2 className="text-3xl font-bold text-black mb-3">
+              Features
+            </h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">
+              Built to protect, alert, and support when it matters most.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => scroll("left")}
+              className="p-2 rounded-full border border-gray-200 hover:bg-wenav-gray transition-colors"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              className="p-2 rounded-full border border-gray-200 hover:bg-wenav-gray transition-colors"
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
           {FEATURES.map((feature) => (
-            <Card key={feature.title}>
-              <div className="flex flex-col items-center text-center py-4">
-                <div className="w-12 h-12 flex items-center justify-center mb-4">
-                  <Image
-                    src={feature.icon}
-                    alt={feature.title}
-                    width={32}
-                    height={32}
-                  />
-                </div>
-                <h3 className="font-semibold text-wenav-dark mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-gray-500">{feature.description}</p>
+            <div
+              key={feature.title}
+              className="shrink-0 w-[390px] min-h-[440px] bg-white rounded-[12px] p-10 snap-start"
+            >
+              <div className="mb-8">
+                <Image
+                  src={feature.icon}
+                  alt={feature.title}
+                  width={32}
+                  height={32}
+                />
               </div>
-            </Card>
+
+              <h3 className="text-[22px] leading-tight font-semibold text-black mb-3 whitespace-pre-line">
+                {feature.title}
+              </h3>
+
+              <p className="text-gray-500 text-[16px] leading-relaxed">
+                {feature.description}
+              </p>
+            </div>
           ))}
         </div>
       </div>

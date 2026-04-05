@@ -1,70 +1,92 @@
 import Image from "next/image";
-import Card from "@/components/shared/Card";
-import { Monitor, Smartphone } from "lucide-react";
 
 export default function DownloadSection() {
   return (
-    <section id="download" className="py-20 bg-white">
+    <section id="download" className="py-20 bg-[#f3f3f7]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold text-wenav-dark text-center mb-4">
+        <h2 className="text-3xl font-bold text-black mb-12">
           Navigate safer. Stay connected.
         </h2>
-        <p className="text-gray-500 text-center mb-12 max-w-2xl mx-auto">
-          Download WeNav on your preferred platform and start navigating with
-          confidence.
-        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {/* PC/Mac */}
-          <Card gray>
-            <div className="text-center py-4">
-              <Monitor size={36} className="mx-auto mb-4 text-wenav-dark" />
-              <h3 className="font-semibold text-wenav-dark mb-2">PC/Mac</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                View the web dashboard, monitor users, and manage reports.
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Admin / Caregiver / Web Dashboard */}
+          <div className="rounded-[32px] bg-[#1E66F5] text-white p-8 flex flex-col">
+            <div className="inline-flex w-fit rounded-full bg-white text-black text-sm px-6 py-2 mb-8">
+              Admin / Caregiver / Dashboard
+            </div>
+
+            <div className="mb-8">
+              <p className="text-white/90 text-sl mb-2">Desktop</p>
+              <h3 className="text-4xl font-medium leading-snug mb-5">PC/Mac</h3>
+              <p className="text-white/90 text-base leading-snug max-w-[320px]">
+                Stay ahead with quick adaptable communication strategies for
+                evolving business landscapes.
               </p>
-              <button className="px-5 py-2 bg-wenav-dark text-white text-sm font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors">
+            </div>
+
+            <div className="mt-auto">
+              <button className="rounded-full bg-white text-black px-8 py-3 text-medium font-medium hover:bg-white/90 transition">
                 Login
               </button>
             </div>
-          </Card>
+          </div>
 
-          {/* iOS */}
-          <Card gray>
-            <div className="text-center py-4">
-              <Smartphone size={36} className="mx-auto mb-4 text-wenav-dark" />
-              <h3 className="font-semibold text-wenav-dark mb-2">iOS</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                The WeNav iOS app enables smartphone-based obstacle detection.
+          {/* Primary User / iOS */}
+          <div className="rounded-[32px] bg-[#ffffff] p-8 min-h-[420px] flex flex-col">
+            <div className="inline-flex w-fit rounded-full bg-[#ECECEC] text-black text-sm px-6 py-2 mb-8">
+              Primary User / iOS
+            </div>
+
+            <div className="mb-8">
+              <p className="text-black/80 text-sl mb-2">Mobile Phone</p>
+              <h3 className="text-4xl font-medium leading-snug mb-5 text-black">
+                iOS
+              </h3>
+              <p className="text-black/70 text-base leading-snug max-w-[320px]">
+                Stay ahead with quick adaptable communication strategies for
+                evolving business landscapes.
               </p>
+            </div>
+
+            <div className="mt-auto">
               <Image
                 src="/assets/appstore_badge.png"
                 alt="Download on the App Store"
                 width={140}
                 height={42}
-                className="mx-auto"
+                className="h-auto"
               />
             </div>
-          </Card>
+          </div>
 
-          {/* Android */}
-          <Card gray>
-            <div className="text-center py-4">
-              <Smartphone size={36} className="mx-auto mb-4 text-wenav-dark" />
-              <h3 className="font-semibold text-wenav-dark mb-2">Android</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                The WeNav Android app enables smartphone-based obstacle
-                detection.
+          {/* Primary User / Android */}
+          <div className="rounded-[32px] bg-[#ffffff] p-8 min-h-[420px] flex flex-col">
+            <div className="inline-flex w-fit rounded-full bg-[#ECECEC] text-black text-sm px-6 py-2 mb-8">
+              Primary User / Android
+            </div>
+
+            <div className="mb-8">
+              <p className="text-black/80 text-sl mb-2">Mobile Phone</p>
+              <h3 className="text-4xl font-medium leading-snug mb-5 text-black">
+                Android
+              </h3>
+              <p className="text-black/70 text-base leading-snug max-w-[320px]">
+                Stay ahead with quick adaptable communication strategies for
+                evolving business landscapes.
               </p>
+            </div>
+
+            <div className="mt-auto">
               <Image
                 src="/assets/googleplay_badge.png"
                 alt="Get it on Google Play"
                 width={160}
                 height={48}
-                className="mx-auto"
+                className="h-auto"
               />
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </section>

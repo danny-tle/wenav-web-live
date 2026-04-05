@@ -51,10 +51,10 @@ export default function TeamSection() {
           {TEAM_MEMBERS.map((member) => (
             <div
               key={member.name}
-              className="flex-shrink-0 w-56 snap-start group"
+              className="flex-shrink-0 w-[360px] snap-start group"
             >
-              <div className="bg-wenav-gray rounded-wenav overflow-hidden p-4 transition-all group-hover:ring-2 group-hover:ring-wenav-purple/30">
-                <div className="relative w-full aspect-square mb-4 rounded-xl overflow-hidden bg-gray-200">
+              <div className=" bg-wenav-gray rounded-wenav overflow-hidden transition-all group-hover:ring-2 group-hover:ring-wenav-purple/30">
+                <div className=" relative w-full aspect-square mb-5 rounded-xl overflow-hidden bg-gray-200">
                   <Image
                     src={member.avatar}
                     alt={member.name}
@@ -63,10 +63,10 @@ export default function TeamSection() {
                     sizes="224px"
                   />
                 </div>
-                <h3 className="font-semibold text-wenav-dark text-sm">
+                <h3 className="font-semibold text-wenav-dark text-sm pl-1 mx-4 mb-1">
                   {member.name}
                 </h3>
-                <p className="text-xs text-gray-500">{member.role}</p>
+                <p className="text-xs text-gray-500 pl-1 mx-4 mb-6">{member.role}</p>
               </div>
             </div>
           ))}

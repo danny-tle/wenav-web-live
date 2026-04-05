@@ -18,8 +18,8 @@ export default function LandingNavbar() {
             <Image
               src="/assets/logo.png"
               alt="WeNav"
-              width={120}
-              height={36}
+              width={111}
+              height={44}
               priority
             />
           </Link>
