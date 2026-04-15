@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SignupPage from "@/app/signup/page";
 
@@ -20,6 +20,13 @@ jest.mock("lucide-react", () => ({
   User: () => <svg data-testid="user-icon" />,
   Mail: () => <svg data-testid="mail-icon" />,
   Lock: () => <svg data-testid="lock-icon" />,
+}));
+
+const mockSignup = jest.fn().mockResolvedValue(undefined);
+jest.mock("@/lib/auth", () => ({
+  useAuth: () => ({
+    signup: mockSignup,
+  }),
 }));
 
 beforeEach(() => {
@@ -84,9 +91,12 @@ describe("Signup page", () => {
     await user.click(screen.getByText("I agree with terms & conditions"));
     await user.click(screen.getByText("Verify your email"));
 
-    expect(mockPush).toHaveBeenCalledWith(
-      "/signup/verify?email=danny%40test.com"
-    );
+    await waitFor(() => {
+      expect(mockSignup).toHaveBeenCalledWith("danny@test.com", "password123", "Danny");
+      expect(mockPush).toHaveBeenCalledWith(
+        "/signup/verify?email=danny%40test.com"
+      );
+    });
   });
 
   it("has a link to the login page", () => {

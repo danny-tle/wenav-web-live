@@ -1,17 +1,23 @@
 "use client";
 
 import { useState, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import Button from "@/components/shared/Button";
+import { useAuth } from "@/lib/auth";
+import { auth } from "@/lib/firebase";
 
 function VerifyForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const email = searchParams.get("email") || "";
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
+  const [error, setError] = useState("");
+  const [resent, setResent] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const { sendVerification } = useAuth();
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -45,9 +51,19 @@ function VerifyForm() {
 
   const isComplete = code.every((d) => d !== "");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will connect to Firebase verification later
+    setError("");
+
+    // Reload the user to check if they verified via the email link
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      if (auth.currentUser.emailVerified) {
+        router.push("/login");
+        return;
+      }
+    }
+    setError("Please verify your email first by clicking the link we sent");
   };
 
   return (
@@ -106,8 +122,23 @@ function VerifyForm() {
           />
         </form>
 
-        <button className="w-full text-center mt-4 text-sm text-wenav-dark font-semibold hover:underline">
-          Resend code
+        {error && (
+          <p className="text-red-500 text-sm font-medium mt-4 text-center">{error}</p>
+        )}
+
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await sendVerification();
+              setResent(true);
+            } catch {
+              setError("Failed to resend. Please try again");
+            }
+          }}
+          className="w-full text-center mt-4 text-sm text-wenav-dark font-semibold hover:underline"
+        >
+          {resent ? "Code resent!" : "Resend code"}
         </button>
       </div>
     </div>

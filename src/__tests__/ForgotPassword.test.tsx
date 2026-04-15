@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ForgotPasswordPage from "@/app/forgot-password/page";
 
@@ -13,6 +13,13 @@ jest.mock("next/image", () => {
 
 jest.mock("lucide-react", () => ({
   Mail: () => <svg data-testid="mail-icon" />,
+}));
+
+const mockResetPassword = jest.fn().mockResolvedValue(undefined);
+jest.mock("@/lib/auth", () => ({
+  useAuth: () => ({
+    resetPassword: mockResetPassword,
+  }),
 }));
 
 describe("Forgot Password page", () => {
@@ -40,11 +47,12 @@ describe("Forgot Password page", () => {
     await user.type(screen.getByLabelText("Email"), "danny@test.com");
     await user.click(screen.getByText("Send password reset link"));
 
-    expect(
-      screen.getByText(/Password reset link sent to/)
-    ).toBeInTheDocument();
-    expect(screen.getByText("danny@test.com")).toBeInTheDocument();
-    expect(screen.getByText("Resend link")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockResetPassword).toHaveBeenCalledWith("danny@test.com");
+      expect(screen.getByText(/Password reset link sent to/)).toBeInTheDocument();
+      expect(screen.getByText("danny@test.com")).toBeInTheDocument();
+      expect(screen.getByText("Resend link")).toBeInTheDocument();
+    });
   });
 
   it("has a back to login link after submission", async () => {
@@ -54,7 +62,9 @@ describe("Forgot Password page", () => {
     await user.type(screen.getByLabelText("Email"), "danny@test.com");
     await user.click(screen.getByText("Send password reset link"));
 
-    const backLink = screen.getByRole("link", { name: /Back to login/ });
-    expect(backLink).toHaveAttribute("href", "/login");
+    await waitFor(() => {
+      const backLink = screen.getByRole("link", { name: /Back to login/ });
+      expect(backLink).toHaveAttribute("href", "/login");
+    });
   });
 });

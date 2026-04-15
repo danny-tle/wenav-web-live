@@ -5,6 +5,7 @@ import VerifyPage from "@/app/signup/verify/page";
 
 jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("email=danny%40test.com"),
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 jest.mock("next/image", () => {
@@ -17,6 +18,16 @@ jest.mock("next/image", () => {
 
 jest.mock("lucide-react", () => ({
   ArrowLeft: () => <svg data-testid="arrow-left" />,
+}));
+
+jest.mock("@/lib/auth", () => ({
+  useAuth: () => ({
+    sendVerification: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+jest.mock("@/lib/firebase", () => ({
+  auth: { currentUser: null },
 }));
 
 describe("Email verification page", () => {

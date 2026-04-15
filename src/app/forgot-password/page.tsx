@@ -6,13 +6,16 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import AuthInput from "@/components/shared/AuthInput";
 import Button from "@/components/shared/Button";
+import { useAuth } from "@/lib/auth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { resetPassword } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -21,12 +24,28 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    setSubmitted(true);
+    setIsSubmitting(true);
+    try {
+      await resetPassword(email);
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/user-not-found") {
+        setError("No account found with this email");
+      } else {
+        setError("Something went wrong. Please try again");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleResend = () => {
-    // Will connect to Firebase password reset later
-    setSubmitted(true);
+  const handleResend = async () => {
+    try {
+      await resetPassword(email);
+    } catch {
+      setError("Failed to resend. Please try again");
+    }
   };
 
   return (
@@ -90,8 +109,9 @@ export default function ForgotPasswordPage() {
 
               <Button
                 type="submit"
-                label="Send password reset link"
+                label={isSubmitting ? "Sending..." : "Send password reset link"}
                 variant="filled"
+                disabled={isSubmitting}
               />
             </form>
           )}

@@ -12,20 +12,33 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const username = email.includes("@") ? email.split("@")[0] : email;
-    const role = login(username, password);
-    if (role === "admin") {
-      router.push("/admin");
-    } else if (role === "user") {
-      router.push("/dashboard");
-    } else {
-      setError("Invalid email or password");
+    setIsSubmitting(true);
+
+    try {
+      const role = await login(email, password);
+      if (role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/wrong-password") {
+        setError("Invalid email or password");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Try again later");
+      } else {
+        setError("Something went wrong. Please try again");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,9 +98,10 @@ export default function LoginPage() {
             {/* Log in button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-lg hover:bg-wenav-dark/90 transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-lg hover:bg-wenav-dark/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Log in
+              {isSubmitting ? "Logging in..." : "Log in"}
             </button>
           </form>
 

@@ -12,11 +12,15 @@ jest.mock("next/image", () => {
 
 jest.mock("@/lib/auth", () => ({
   useAuth: () => ({
-    login: jest.fn(),
+    user: null,
+    login: jest.fn().mockResolvedValue("user"),
+    signup: jest.fn(),
     isLoggedIn: false,
     isLoading: false,
     role: null,
     logout: jest.fn(),
+    sendVerification: jest.fn(),
+    resetPassword: jest.fn(),
   }),
 }));
 

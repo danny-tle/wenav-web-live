@@ -8,63 +8,104 @@ import {
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signOut,
+  updateProfile,
+  User,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export type UserRole = "user" | "admin" | null;
 
 interface AuthContextType {
+  user: User | null;
   isLoggedIn: boolean;
   isLoading: boolean;
   role: UserRole;
-  login: (username: string, password: string) => UserRole;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<UserRole>;
+  signup: (email: string, password: string, displayName: string) => Promise<void>;
+  logout: () => Promise<void>;
+  sendVerification: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  user: { password: "password", role: "user" },
-  admin: { password: "password", role: "admin" },
-};
-
-const AUTH_KEY = "wenav_auth";
-const ROLE_KEY = "wenav_role";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedAuth = sessionStorage.getItem(AUTH_KEY);
-    const storedRole = sessionStorage.getItem(ROLE_KEY) as UserRole;
-    if (storedAuth === "true" && storedRole) {
-      setIsLoggedIn(true);
-      setRole(storedRole);
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        setIsLoggedIn(true);
+        // Default all users to "user" role for now
+        // Admin roles can be added later via Firebase custom claims
+        setRole("user");
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+        setRole(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (username: string, password: string): UserRole => {
-    const cred = CREDENTIALS[username];
-    if (cred && cred.password === password) {
-      sessionStorage.setItem(AUTH_KEY, "true");
-      sessionStorage.setItem(ROLE_KEY, cred.role!);
-      setIsLoggedIn(true);
-      setRole(cred.role);
-      return cred.role;
-    }
-    return null;
+  const login = async (email: string, password: string): Promise<UserRole> => {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    setUser(result.user);
+    setIsLoggedIn(true);
+    setRole("user");
+    return "user";
   };
 
-  const logout = () => {
-    sessionStorage.removeItem(AUTH_KEY);
-    sessionStorage.removeItem(ROLE_KEY);
+  const signup = async (email: string, password: string, displayName: string): Promise<void> => {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(result.user, { displayName });
+    await sendEmailVerification(result.user);
+  };
+
+  const sendVerification = async (): Promise<void> => {
+    if (auth.currentUser) {
+      await sendEmailVerification(auth.currentUser);
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<void> => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
+  const logout = async (): Promise<void> => {
+    await signOut(auth);
+    setUser(null);
     setIsLoggedIn(false);
     setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, role, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoggedIn,
+        isLoading,
+        role,
+        login,
+        signup,
+        logout,
+        sendVerification,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

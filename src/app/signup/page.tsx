@@ -7,6 +7,7 @@ import Image from "next/image";
 import { User, Mail, Lock } from "lucide-react";
 import AuthInput from "@/components/shared/AuthInput";
 import Button from "@/components/shared/Button";
+import { useAuth } from "@/lib/auth";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -14,9 +15,11 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const { signup } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -33,7 +36,22 @@ export default function SignupPage() {
       return;
     }
 
-    router.push(`/signup/verify?email=${encodeURIComponent(email)}`);
+    setIsSubmitting(true);
+    try {
+      await signup(email, password, name);
+      router.push(`/signup/verify?email=${encodeURIComponent(email)}`);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/email-already-in-use") {
+        setError("An account with this email already exists");
+      } else if (code === "auth/weak-password") {
+        setError("Password is too weak");
+      } else {
+        setError("Something went wrong. Please try again");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -130,8 +148,9 @@ export default function SignupPage() {
 
             <Button
               type="submit"
-              label="Verify your email"
+              label={isSubmitting ? "Creating account..." : "Verify your email"}
               variant="filled"
+              disabled={isSubmitting}
             />
           </form>
         </div>
