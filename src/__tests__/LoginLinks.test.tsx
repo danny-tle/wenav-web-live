@@ -21,6 +21,8 @@ jest.mock("@/lib/auth", () => ({
     logout: jest.fn(),
     sendVerification: jest.fn(),
     resetPassword: jest.fn(),
+    updateName: jest.fn(),
+    changePassword: jest.fn(),
   }),
 }));
 

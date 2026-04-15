@@ -23,6 +23,8 @@ jest.mock("lucide-react", () => ({
 jest.mock("@/lib/auth", () => ({
   useAuth: () => ({
     sendVerification: jest.fn().mockResolvedValue(undefined),
+    updateName: jest.fn(),
+    changePassword: jest.fn(),
   }),
 }));
 

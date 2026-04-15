@@ -26,6 +26,8 @@ const mockSignup = jest.fn().mockResolvedValue(undefined);
 jest.mock("@/lib/auth", () => ({
   useAuth: () => ({
     signup: mockSignup,
+    updateName: jest.fn(),
+    changePassword: jest.fn(),
   }),
 }));
 

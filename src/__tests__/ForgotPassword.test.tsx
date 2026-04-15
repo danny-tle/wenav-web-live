@@ -19,6 +19,8 @@ const mockResetPassword = jest.fn().mockResolvedValue(undefined);
 jest.mock("@/lib/auth", () => ({
   useAuth: () => ({
     resetPassword: mockResetPassword,
+    updateName: jest.fn(),
+    changePassword: jest.fn(),
   }),
 }));
 

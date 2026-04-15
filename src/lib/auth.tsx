@@ -15,6 +15,9 @@ import {
   sendPasswordResetEmail,
   signOut,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   User,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -35,6 +38,7 @@ interface AuthContextType {
   sendVerification: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateName: (name: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -89,6 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    if (!auth.currentUser || !auth.currentUser.email) throw new Error("Not signed in");
+    const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+    await updatePassword(auth.currentUser, newPassword);
+  };
+
   const updateName = async (name: string): Promise<void> => {
     if (auth.currentUser) {
       await updateProfile(auth.currentUser, { displayName: name });
@@ -117,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sendVerification,
         resetPassword,
         updateName,
+        changePassword,
       }}
     >
       {children}
