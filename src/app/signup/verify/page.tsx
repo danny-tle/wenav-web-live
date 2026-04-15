@@ -7,7 +7,8 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import Button from "@/components/shared/Button";
 import { useAuth } from "@/lib/auth";
-import { auth } from "@/lib/firebase";
+import { auth, functions } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
 
 function VerifyForm() {
   const searchParams = useSearchParams();
@@ -16,6 +17,7 @@ function VerifyForm() {
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [error, setError] = useState("");
   const [resent, setResent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const { sendVerification } = useAuth();
 
@@ -54,16 +56,20 @@ function VerifyForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
-    // Reload the user to check if they verified via the email link
-    if (auth.currentUser) {
-      await auth.currentUser.reload();
-      if (auth.currentUser.emailVerified) {
-        router.push("/login");
-        return;
-      }
+    try {
+      const verifyCode = httpsCallable(functions, "verifyEmailCode");
+      await verifyCode({ code: code.join("") });
+      // Refresh token so emailVerified is updated
+      await auth.currentUser?.getIdToken(true);
+      router.push("/login");
+    } catch (err: unknown) {
+      const message = (err as { message?: string }).message || "Verification failed. Please try again.";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
     }
-    setError("Please verify your email first by clicking the link we sent");
   };
 
   return (
@@ -91,9 +97,9 @@ function VerifyForm() {
           Check your email
         </h1>
         <p className="text-sm text-gray-400 mb-8">
-          We&apos;ve sent an email to{" "}
-          <span className="font-semibold text-gray-600">{email}</span> with a
-          link to complete your sign-up
+          We&apos;ve sent a 6-digit code to{" "}
+          <span className="font-semibold text-gray-600">{email}</span> to
+          verify your account
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -116,9 +122,9 @@ function VerifyForm() {
 
           <Button
             type="submit"
-            label="Create an account"
+            label={isSubmitting ? "Verifying..." : "Create an account"}
             variant="filled"
-            disabled={!isComplete}
+            disabled={!isComplete || isSubmitting}
           />
         </form>
 

@@ -28,6 +28,11 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("@/lib/firebase", () => ({
   auth: { currentUser: null },
+  functions: {},
+}));
+
+jest.mock("firebase/functions", () => ({
+  httpsCallable: () => jest.fn().mockResolvedValue({ data: { success: true } }),
 }));
 
 describe("Email verification page", () => {

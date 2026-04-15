@@ -12,13 +12,13 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
   updateProfile,
   User,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions } from "@/lib/firebase";
 
 export type UserRole = "user" | "admin" | null;
 
@@ -72,12 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (email: string, password: string, displayName: string): Promise<void> => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(result.user, { displayName });
-    await sendEmailVerification(result.user);
+    const sendCode = httpsCallable(functions, "sendVerificationCode");
+    await sendCode();
   };
 
   const sendVerification = async (): Promise<void> => {
     if (auth.currentUser) {
-      await sendEmailVerification(auth.currentUser);
+      const sendCode = httpsCallable(functions, "sendVerificationCode");
+      await sendCode();
     }
   };
 
