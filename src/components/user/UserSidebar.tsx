@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import NotificationPanel from "@/components/shared/NotificationPanel";
+import { useAuth } from "@/lib/auth";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,8 +26,11 @@ const NAV_ITEMS = [
 
 export default function UserSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const displayName = user?.displayName || "User";
+  const initial = displayName.charAt(0).toUpperCase();
 
   const sidebarContent = (
     <>
@@ -35,10 +39,10 @@ export default function UserSidebar() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-wenav-gray flex items-center justify-center">
-              <span className="text-xs font-semibold text-gray-500">U</span>
+              <span className="text-xs font-semibold text-gray-500">{initial}</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-sm font-medium">User</span>
+              <span className="text-sm font-medium">{displayName}</span>
               <ChevronDown size={14} className="text-gray-400" />
             </div>
           </div>

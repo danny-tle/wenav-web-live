@@ -63,7 +63,7 @@ function VerifyForm() {
       await verifyCode({ code: code.join("") });
       // Refresh token so emailVerified is updated
       await auth.currentUser?.getIdToken(true);
-      router.push("/login");
+      router.push("/dashboard");
     } catch (err: unknown) {
       const message = (err as { message?: string }).message || "Verification failed. Please try again.";
       setError(message);

@@ -22,6 +22,8 @@ import { auth, functions } from "@/lib/firebase";
 
 export type UserRole = "user" | "admin" | null;
 
+const ADMIN_EMAILS = ["wenavapp@gmail.com"];
+
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
@@ -32,6 +34,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   sendVerification: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateName: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,9 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         setUser(firebaseUser);
         setIsLoggedIn(true);
-        // Default all users to "user" role for now
-        // Admin roles can be added later via Firebase custom claims
-        setRole("user");
+        setRole(ADMIN_EMAILS.includes(firebaseUser.email || "") ? "admin" : "user");
       } else {
         setUser(null);
         setIsLoggedIn(false);
@@ -63,10 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<UserRole> => {
     const result = await signInWithEmailAndPassword(auth, email, password);
+    const userRole = ADMIN_EMAILS.includes(result.user.email || "") ? "admin" : "user";
     setUser(result.user);
     setIsLoggedIn(true);
-    setRole("user");
-    return "user";
+    setRole(userRole);
+    return userRole;
   };
 
   const signup = async (email: string, password: string, displayName: string): Promise<void> => {
@@ -85,6 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string): Promise<void> => {
     await sendPasswordResetEmail(auth, email);
+  };
+
+  const updateName = async (name: string): Promise<void> => {
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, { displayName: name });
+      // Trigger re-render with updated user object
+      setUser({ ...auth.currentUser } as User);
+    }
   };
 
   const logout = async (): Promise<void> => {
@@ -106,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         sendVerification,
         resetPassword,
+        updateName,
       }}
     >
       {children}

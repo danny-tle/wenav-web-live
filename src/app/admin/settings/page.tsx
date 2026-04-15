@@ -1,12 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Card from "@/components/shared/Card";
 
 export default function AdminSettingsPage() {
-  const { logout } = useAuth();
+  const { user, role, logout, updateName } = useAuth();
   const router = useRouter();
+  const [name, setName] = useState(user?.displayName || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const nameChanged = name !== (user?.displayName || "");
 
   const handleLogout = () => {
     logout();
@@ -28,15 +33,32 @@ export default function AdminSettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Name</label>
-              <input type="text" value="Admin" readOnly className="w-full px-4 py-2.5 bg-wenav-gray rounded-wenav text-sm text-gray-700" />
+              <input type="text" value={name} onChange={(e) => { setName(e.target.value); setSaved(false); }} className="w-full px-4 py-2.5 bg-wenav-gray rounded-wenav text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              {nameChanged && (
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    await updateName(name);
+                    setSaving(false);
+                    setSaved(true);
+                  }}
+                  disabled={saving}
+                  className="mt-2 text-sm text-wenav-purple font-medium hover:text-wenav-purple/80 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save name"}
+                </button>
+              )}
+              {saved && !nameChanged && (
+                <p className="mt-1 text-xs text-green-600">Name updated!</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
-              <input type="email" value="placeholder@email.com" readOnly className="w-full px-4 py-2.5 bg-wenav-gray rounded-wenav text-sm text-gray-700" />
+              <input type="email" value={user?.email || ""} readOnly className="w-full px-4 py-2.5 bg-wenav-gray rounded-wenav text-sm text-gray-700" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Role</label>
-              <input type="text" value="Administrator" readOnly className="w-full px-4 py-2.5 bg-wenav-gray rounded-wenav text-sm text-gray-700" />
+              <input type="text" value={role === "admin" ? "Administrator" : "User"} readOnly className="w-full px-4 py-2.5 bg-wenav-gray rounded-wenav text-sm text-gray-700" />
             </div>
           </div>
         </Card>
