@@ -2,29 +2,43 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Mail, Lock } from "lucide-react";
+import AuthInput from "@/components/shared/AuthInput";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const username = email.includes("@") ? email.split("@")[0] : email;
-    const role = login(username, password);
-    if (role === "admin") {
-      router.push("/admin");
-    } else if (role === "user") {
-      router.push("/dashboard");
-    } else {
-      setError("Invalid email or password");
+    setIsSubmitting(true);
+
+    try {
+      const role = await login(email, password);
+      if (role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/wrong-password") {
+        setError("Invalid email or password");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Try again later");
+      } else {
+        setError("Something went wrong. Please try again");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -48,66 +62,32 @@ export default function LoginPage() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email ID */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
-              >
-                Email ID
-              </label>
-              <div
-                className={`flex items-center border rounded-lg px-3 py-3 transition-colors ${
-                  focusedField === "email"
-                    ? "border-blue-500 ring-1 ring-blue-500"
-                    : "border-gray-300"
-                }`}
-              >
-                <Mail size={16} className="text-gray-400 mr-3 flex-shrink-0" />
-                <input
-                  id="email"
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setFocusedField("email")}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="example@gmail.com"
-                  className="flex-1 outline-none text-sm text-gray-700 placeholder:text-gray-400"
-                />
-              </div>
-            </div>
+            <AuthInput
+              id="email"
+              label="Email ID"
+              value={email}
+              onChange={setEmail}
+              placeholder="example@gmail.com"
+              icon={Mail}
+            />
 
-            {/* Password */}
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
-              >
-                Password
-              </label>
-              <div
-                className={`flex items-center border rounded-lg px-3 py-3 transition-colors ${
-                  focusedField === "password"
-                    ? "border-blue-500 ring-1 ring-blue-500"
-                    : "border-gray-300"
-                }`}
-              >
-                <Lock size={16} className="text-gray-400 mr-3 flex-shrink-0" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setFocusedField("password")}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="Enter your password"
-                  className="flex-1 outline-none text-sm text-gray-700 placeholder:text-gray-400"
-                />
-              </div>
+              <AuthInput
+                id="password"
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                placeholder="Enter your password"
+                icon={Lock}
+              />
               <div className="text-right mt-1.5">
-                <span className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
                   forgot password?
-                </span>
+                </Link>
               </div>
             </div>
 
@@ -118,9 +98,10 @@ export default function LoginPage() {
             {/* Log in button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-lg hover:bg-wenav-dark/90 transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-lg hover:bg-wenav-dark/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Log in
+              {isSubmitting ? "Logging in..." : "Log in"}
             </button>
           </form>
 
@@ -154,9 +135,12 @@ export default function LoginPage() {
           {/* Sign up link */}
           <p className="mt-8 text-center text-sm text-gray-400">
             Don&apos;t have an account?{" "}
-            <span className="text-wenav-dark font-semibold cursor-pointer hover:underline">
+            <Link
+              href="/signup"
+              className="text-wenav-dark font-semibold hover:underline"
+            >
               Sign up
-            </span>
+            </Link>
           </p>
         </div>
       </div>

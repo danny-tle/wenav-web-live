@@ -8,63 +8,129 @@ import {
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+  updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  User,
+} from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions } from "@/lib/firebase";
 
 export type UserRole = "user" | "admin" | null;
 
+const ADMIN_EMAILS = ["wenavapp@gmail.com"];
+
 interface AuthContextType {
+  user: User | null;
   isLoggedIn: boolean;
   isLoading: boolean;
   role: UserRole;
-  login: (username: string, password: string) => UserRole;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<UserRole>;
+  signup: (email: string, password: string, displayName: string) => Promise<void>;
+  logout: () => Promise<void>;
+  sendVerification: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateName: (name: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  user: { password: "password", role: "user" },
-  admin: { password: "password", role: "admin" },
-};
-
-const AUTH_KEY = "wenav_auth";
-const ROLE_KEY = "wenav_role";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedAuth = sessionStorage.getItem(AUTH_KEY);
-    const storedRole = sessionStorage.getItem(ROLE_KEY) as UserRole;
-    if (storedAuth === "true" && storedRole) {
-      setIsLoggedIn(true);
-      setRole(storedRole);
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        setIsLoggedIn(true);
+        setRole(ADMIN_EMAILS.includes(firebaseUser.email || "") ? "admin" : "user");
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+        setRole(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (username: string, password: string): UserRole => {
-    const cred = CREDENTIALS[username];
-    if (cred && cred.password === password) {
-      sessionStorage.setItem(AUTH_KEY, "true");
-      sessionStorage.setItem(ROLE_KEY, cred.role!);
-      setIsLoggedIn(true);
-      setRole(cred.role);
-      return cred.role;
-    }
-    return null;
+  const login = async (email: string, password: string): Promise<UserRole> => {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    const userRole = ADMIN_EMAILS.includes(result.user.email || "") ? "admin" : "user";
+    setUser(result.user);
+    setIsLoggedIn(true);
+    setRole(userRole);
+    return userRole;
   };
 
-  const logout = () => {
-    sessionStorage.removeItem(AUTH_KEY);
-    sessionStorage.removeItem(ROLE_KEY);
+  const signup = async (email: string, password: string, displayName: string): Promise<void> => {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(result.user, { displayName });
+    const sendCode = httpsCallable(functions, "sendVerificationCode");
+    await sendCode();
+  };
+
+  const sendVerification = async (): Promise<void> => {
+    if (auth.currentUser) {
+      const sendCode = httpsCallable(functions, "sendVerificationCode");
+      await sendCode();
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<void> => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    if (!auth.currentUser || !auth.currentUser.email) throw new Error("Not signed in");
+    const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+    await updatePassword(auth.currentUser, newPassword);
+  };
+
+  const updateName = async (name: string): Promise<void> => {
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, { displayName: name });
+      // Trigger re-render with updated user object
+      setUser({ ...auth.currentUser } as User);
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    await signOut(auth);
+    setUser(null);
     setIsLoggedIn(false);
     setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, role, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoggedIn,
+        isLoading,
+        role,
+        login,
+        signup,
+        logout,
+        sendVerification,
+        resetPassword,
+        updateName,
+        changePassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
