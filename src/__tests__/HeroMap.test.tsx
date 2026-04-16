@@ -11,6 +11,7 @@ import HeroMap from "@/components/landing/HeroMap";
 
 // Stub next/dynamic so MapWrapper renders as a lightweight element
 jest.mock("next/dynamic", () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dynamic = (_loader: unknown, _opts?: unknown) => {
     const Mock = () => <div data-testid="map-wrapper" />;
     Mock.displayName = "MockDynamic";

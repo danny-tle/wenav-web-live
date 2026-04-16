@@ -17,23 +17,23 @@ const mockSetDoc = jest.fn();
 const mockGetDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockOnSnapshot = jest.fn();
-const mockCollection = jest.fn((...args: any[]) => ({ path: args[1] }));
-const mockDoc = jest.fn((...args: any[]) => ({ path: args[1], id: args[2] }));
-const mockQuery = jest.fn((...args: any[]) => args[0]);
+const mockCollection = jest.fn((...args: unknown[]) => ({ path: args[1] }));
+const mockDoc = jest.fn((...args: unknown[]) => ({ path: args[1], id: args[2] }));
+const mockQuery = jest.fn((...args: unknown[]) => args[0]);
 const mockOrderBy = jest.fn();
 const mockServerTimestamp = jest.fn(() => "__SERVER_TS__");
 
 jest.mock("firebase/firestore", () => ({
-  collection: (...args: any[]) => mockCollection(...args),
-  doc: (...args: any[]) => mockDoc(...args),
-  addDoc: (...args: any[]) => mockAddDoc(...args),
-  updateDoc: (...args: any[]) => mockUpdateDoc(...args),
-  setDoc: (...args: any[]) => mockSetDoc(...args),
-  getDoc: (...args: any[]) => mockGetDoc(...args),
-  deleteDoc: (...args: any[]) => mockDeleteDoc(...args),
-  onSnapshot: (...args: any[]) => mockOnSnapshot(...args),
-  query: (...args: any[]) => mockQuery(...args),
-  orderBy: (...args: any[]) => mockOrderBy(...args),
+  collection: (...args: unknown[]) => mockCollection(...args),
+  doc: (...args: unknown[]) => mockDoc(...args),
+  addDoc: (...args: unknown[]) => mockAddDoc(...args),
+  updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
+  setDoc: (...args: unknown[]) => mockSetDoc(...args),
+  getDoc: (...args: unknown[]) => mockGetDoc(...args),
+  deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
+  onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
+  orderBy: (...args: unknown[]) => mockOrderBy(...args),
   serverTimestamp: () => mockServerTimestamp(),
   // Fake Timestamp: toDate() converts the stored ISO string to a Date.
   Timestamp: class {
