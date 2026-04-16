@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Search, ChevronDown, ChevronUp, ChevronRight, Image as ImageIcon, Play } from "lucide-react";
+import { subscribeToIncidents, updateIncidentStatus } from "@/lib/firestore";
+import { Incident } from "@/lib/types";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
@@ -21,7 +23,7 @@ interface MockIncident {
 
 const MOCK_INCIDENTS: MockIncident[] = [
   {
-    id: "1",
+    id: "mock-1",
     date: "March 1, 2026 3:45 PM (MT)",
     location: "1234 W Maple Dr, Salt Lake City, UT 84101, USA",
     type: "Under Construction",
@@ -30,7 +32,7 @@ const MOCK_INCIDENTS: MockIncident[] = [
     verificationNote: "Insufficient information to verify the reported obstacle.",
   },
   {
-    id: "2",
+    id: "mock-2",
     date: "March 1, 2026 3:45 PM (MT)",
     location: "1234 W Maple Dr, Salt Lake City, UT 84101, USA",
     type: "Under Construction",
@@ -39,7 +41,7 @@ const MOCK_INCIDENTS: MockIncident[] = [
     verificationNote: "Area under active construction, multiple reports received.",
   },
   {
-    id: "3",
+    id: "mock-3",
     date: "March 1, 2026 3:45 PM (MT)",
     location: "1234 W Maple Dr, Salt Lake City, UT 84101, USA",
     type: "Under Construction",
@@ -48,7 +50,7 @@ const MOCK_INCIDENTS: MockIncident[] = [
     verificationNote: "Verified and confirmed by field inspection.",
   },
   {
-    id: "4",
+    id: "mock-4",
     date: "February 28, 2026 10:15 AM (MT)",
     location: "567 E State St, Salt Lake City, UT 84102, USA",
     type: "Blocked Path",
@@ -57,7 +59,7 @@ const MOCK_INCIDENTS: MockIncident[] = [
     verificationNote: "Awaiting photo evidence from reporter.",
   },
   {
-    id: "5",
+    id: "mock-5",
     date: "February 25, 2026 2:30 PM (MT)",
     location: "890 S Main St, Salt Lake City, UT 84101, USA",
     type: "Uneven Sidewalk",
@@ -67,22 +69,59 @@ const MOCK_INCIDENTS: MockIncident[] = [
   },
 ];
 
+const TYPE_LABELS: Record<Incident["type"], string> = {
+  blocked_path: "Blocked Path",
+  construction: "Under Construction",
+  uneven_sidewalk: "Uneven Sidewalk",
+  low_obstacle: "Low Obstacle",
+  other: "Other",
+};
+
+// Adapts a Firestore Incident to the display shape used by mock rows
+function firestoreToDisplay(inc: Incident): MockIncident {
+  return {
+    id: inc.id,
+    date: inc.reportedAt,
+    location: inc.address,
+    type: TYPE_LABELS[inc.type] ?? inc.type,
+    status: inc.status === "approved" ? "Completed" : "In-process",
+    lastUpdated: inc.lastUpdated ?? "",
+    verificationNote: inc.verificationNote ?? "",
+  };
+}
+
 export default function AdminIncidentsPage() {
-  const [expandedId, setExpandedId] = useState<string | null>("1");
-  const [incidents, setIncidents] = useState(MOCK_INCIDENTS);
+  const [expandedId, setExpandedId] = useState<string | null>("mock-1");
+  const [mockIncidents, setMockIncidents] = useState<MockIncident[]>(MOCK_INCIDENTS);
+  // Real Firestore incidents — empty until data arrives; replaces mocks when populated
+  const [liveIncidents, setLiveIncidents] = useState<Incident[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeToIncidents(setLiveIncidents);
+    return unsub;
+  }, []);
+
+  // Use live Firestore data when available, otherwise fall back to mocks
+  const usingLive = liveIncidents.length > 0;
+  const displayIncidents: MockIncident[] = usingLive
+    ? liveIncidents.map(firestoreToDisplay)
+    : mockIncidents;
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleAction = (id: string, action: "confirm" | "reject") => {
-    setIncidents((prev) =>
-      prev.map((inc) =>
-        inc.id === id
-          ? { ...inc, status: action === "confirm" ? "Completed" as const : "Completed" as const }
-          : inc
-      )
-    );
+  const handleAction = async (id: string, action: "confirm" | "reject") => {
+    if (usingLive) {
+      const status = action === "confirm" ? "approved" : "not_confirmed";
+      await updateIncidentStatus(id, status as Incident["status"]);
+    } else {
+      setMockIncidents((prev) =>
+        prev.map((inc) =>
+          inc.id === id ? { ...inc, status: "Completed" as const } : inc
+        )
+      );
+    }
   };
 
   return (
@@ -94,7 +133,7 @@ export default function AdminIncidentsPage() {
 
       {/* Total incidents header */}
       <h1 className="text-2xl font-bold text-wenav-dark">
-        Total Incidents {incidents.length.toLocaleString()}
+        Total Incidents {displayIncidents.length.toLocaleString()}
       </h1>
 
       {/* Search + filters */}
@@ -135,13 +174,13 @@ export default function AdminIncidentsPage() {
           <span>Status</span>
           <span>Last Updated</span>
           <span className="text-right pr-2">
-            Showing 1 – {Math.min(10, incidents.length)} of {incidents.length}{" "}
+            Showing 1 – {Math.min(10, displayIncidents.length)} of {displayIncidents.length}{" "}
             <ChevronRight size={12} className="inline" />
           </span>
         </div>
 
         {/* Rows */}
-        {incidents.map((incident) => {
+        {displayIncidents.map((incident) => {
           const isExpanded = expandedId === incident.id;
           return (
             <div key={incident.id} className="border-b border-gray-50 last:border-0">

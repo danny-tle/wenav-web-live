@@ -2,14 +2,42 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
     // Verification codes — only accessible via Cloud Functions (Admin SDK)
     match /verificationCodes/{email} {
       allow read, write: if false;
     }
 
-    // Default: allow authenticated users to read/write their own data
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Incidents — any authenticated user can create; only admins can update/delete
+    match /incidents/{incidentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && request.auth.token.email == "wenavapp@gmail.com";
+    }
+
+    // High-risk areas — admins can write; any authenticated user can read
+    match /highRiskAreas/{areaId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+        && request.auth.token.email == "wenavapp@gmail.com";
+    }
+
+    // User profiles — users can read/write their own; admins can read all
+    match /users/{userId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == userId
+          || request.auth.token.email == "wenavapp@gmail.com");
+      allow write: if request.auth != null
+        && (request.auth.uid == userId
+          || request.auth.token.email == "wenavapp@gmail.com");
+    }
+
+    // Notifications — users can read/write their own subcollection
+    match /users/{userId}/notifications/{notifId} {
+      allow read, write: if request.auth != null
+        && (request.auth.uid == userId
+          || request.auth.token.email == "wenavapp@gmail.com");
     }
   }
 }

@@ -17,6 +17,8 @@ export interface Incident {
   description: string;
   reportedAt: string;
   reportedBy: string;
+  verificationNote?: string;
+  lastUpdated?: string;
 }
 
 export interface TrackedUser {
@@ -48,6 +50,24 @@ export interface Notification {
   timestamp: string;
   read: boolean;
   userId?: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  displayName: string;
+  email: string;
+  role: "user" | "admin";
+  createdAt: string;
+  status: "online" | "offline";
+}
+
+export interface HighRiskArea {
+  id: string;
+  lat: number;
+  lng: number;
+  label: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 export interface TeamMember {

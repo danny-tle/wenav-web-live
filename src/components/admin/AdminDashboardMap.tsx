@@ -13,6 +13,14 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
 import { MapPin, Search, X } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import {
+  subscribeToIncidents,
+  subscribeToHighRiskAreas,
+  subscribeToUserProfiles,
+  addHighRiskArea,
+} from "@/lib/firestore";
+import { Incident, HighRiskArea } from "@/lib/types";
 
 interface NominatimResult {
   place_id: number;
@@ -27,13 +35,6 @@ function MapFlyTo({ location, zoom }: { location: [number, number]; zoom: number
     map.flyTo(location, zoom, { duration: 1.5 });
   }, [location, zoom, map]);
   return null;
-}
-
-interface HighRiskArea {
-  id: string;
-  lat: number;
-  lng: number;
-  label: string;
 }
 
 interface PendingPin {
@@ -68,17 +69,6 @@ const highRiskIcon = L.divIcon({
   className: "",
 });
 
-// Sample incident locations around SLC
-const SAMPLE_INCIDENTS = [
-  { id: "i1", lat: 40.771, lng: -111.895 },
-  { id: "i2", lat: 40.769, lng: -111.888 },
-  { id: "i3", lat: 40.755, lng: -111.905 },
-  { id: "i4", lat: 40.748, lng: -111.876 },
-  { id: "i5", lat: 40.738, lng: -111.895 },
-  { id: "i6", lat: 40.742, lng: -111.87 },
-  { id: "i7", lat: 40.765, lng: -111.862 },
-];
-
 function MapClickHandler({
   onMapClick,
 }: {
@@ -93,7 +83,10 @@ function MapClickHandler({
 }
 
 export default function AdminDashboardMap() {
+  const { user } = useAuth();
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [highRiskAreas, setHighRiskAreas] = useState<HighRiskArea[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
   const [pinLabel, setPinLabel] = useState("");
 
@@ -104,6 +97,18 @@ export default function AdminDashboardMap() {
   const [flyToLocation, setFlyToLocation] = useState<[number, number] | undefined>(undefined);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Subscribe to Firestore incidents, high-risk areas, and users
+  useEffect(() => {
+    const unsubIncidents = subscribeToIncidents(setIncidents);
+    const unsubAreas = subscribeToHighRiskAreas(setHighRiskAreas);
+    const unsubUsers = subscribeToUserProfiles((users) => setTotalUsers(users.length));
+    return () => {
+      unsubIncidents();
+      unsubAreas();
+      unsubUsers();
+    };
+  }, []);
 
   // Debounced geocoding search via Nominatim
   useEffect(() => {
@@ -159,17 +164,14 @@ export default function AdminDashboardMap() {
     setPinLabel("");
   }, []);
 
-  const confirmPin = () => {
+  const confirmPin = async () => {
     if (pendingPin && pinLabel.trim()) {
-      setHighRiskAreas((prev) => [
-        ...prev,
-        {
-          id: `hr-${Date.now()}`,
-          lat: pendingPin.lat,
-          lng: pendingPin.lng,
-          label: pinLabel.trim(),
-        },
-      ]);
+      await addHighRiskArea({
+        lat: pendingPin.lat,
+        lng: pendingPin.lng,
+        label: pinLabel.trim(),
+        createdBy: user?.uid ?? "",
+      });
       setPendingPin(null);
       setPinLabel("");
     }
@@ -196,13 +198,14 @@ export default function AdminDashboardMap() {
         <MapClickHandler onMapClick={handleMapClick} />
         {flyToLocation && <MapFlyTo location={flyToLocation} zoom={15} />}
 
-        {/* Sample incident markers */}
-        {SAMPLE_INCIDENTS.map((inc) => (
-          <Marker key={inc.id} position={[inc.lat, inc.lng]} icon={incidentIcon}>
+        {/* Incident markers from Firestore */}
+        {incidents.map((inc) => (
+          <Marker key={inc.id} position={[inc.location.lat, inc.location.lng]} icon={incidentIcon}>
             <Popup>
               <div className="text-sm">
-                <p className="font-semibold">Reported Incident</p>
-                <p className="text-gray-500">Click to view details</p>
+                <p className="font-semibold">{inc.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+                <p className="text-gray-500">{inc.address}</p>
+                <p className="text-gray-400 text-xs mt-1">{inc.reportedAt}</p>
               </div>
             </Popup>
           </Marker>
@@ -306,18 +309,18 @@ export default function AdminDashboardMap() {
 
         {/* Stats cards */}
         <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-red-400 font-medium">Active Users</span>
-          <span className="text-sm font-bold text-wenav-dark">10,345,235</span>
+          <span className="text-sm text-red-400 font-medium">Total Users</span>
+          <span className="text-sm font-bold text-wenav-dark">{totalUsers}</span>
         </div>
         <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-red-400 font-medium">Pending Reports</span>
-          <span className="text-sm font-bold text-wenav-dark">5</span>
+          <span className="text-sm font-bold text-wenav-dark">
+            {incidents.filter((i) => i.status === "under_review").length}
+          </span>
         </div>
         <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-red-400 font-medium">Saved high-risk areas</span>
-          <span className="text-sm font-bold text-wenav-dark">
-            {101 + highRiskAreas.length}
-          </span>
+          <span className="text-sm font-bold text-wenav-dark">{highRiskAreas.length}</span>
         </div>
       </div>
 
