@@ -19,12 +19,12 @@ jest.mock("leaflet", () => ({
 // Each component is replaced with a plain HTML element so React can still
 // render the component tree and we can assert on the UI around the map.
 jest.mock("react-leaflet", () => ({
-  MapContainer: ({ children }: any) => (
+  MapContainer: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="map-container">{children}</div>
   ),
   TileLayer: () => null, // just a tile URL, nothing to assert on
-  Marker: ({ children }: any) => <div data-testid="marker">{children}</div>,
-  Popup: ({ children }: any) => <div data-testid="popup">{children}</div>,
+  Marker: ({ children }: { children?: React.ReactNode }) => <div data-testid="marker">{children}</div>,
+  Popup: ({ children }: { children?: React.ReactNode }) => <div data-testid="popup">{children}</div>,
   useMapEvents: () => null, // map click events are tested separately
   useMap: () => ({ flyTo: jest.fn() }),
 }));
