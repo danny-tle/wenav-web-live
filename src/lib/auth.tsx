@@ -22,6 +22,7 @@ import {
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "@/lib/firebase";
+import { upsertUserProfile } from "@/lib/firestore";
 
 export type UserRole = "user" | "admin" | null;
 
@@ -50,11 +51,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         setIsLoggedIn(true);
         setRole(ADMIN_EMAILS.includes(firebaseUser.email || "") ? "admin" : "user");
+        // Ensure a Firestore profile exists for this user (covers pre-existing Auth accounts)
+        try {
+          await upsertUserProfile(firebaseUser.uid, {
+            displayName: firebaseUser.displayName ?? "Unknown",
+            email: firebaseUser.email ?? "",
+            role: ADMIN_EMAILS.includes(firebaseUser.email || "") ? "admin" : "user",
+            status: "offline",
+          });
+        } catch (err) {
+          console.error("Failed to create user profile in Firestore:", err);
+        }
       } else {
         setUser(null);
         setIsLoggedIn(false);
@@ -78,6 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (email: string, password: string, displayName: string): Promise<void> => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(result.user, { displayName });
+    await upsertUserProfile(result.user.uid, {
+      displayName,
+      email,
+      role: ADMIN_EMAILS.includes(email) ? "admin" : "user",
+      status: "offline",
+    });
     const sendCode = httpsCallable(functions, "sendVerificationCode");
     await sendCode();
   };
