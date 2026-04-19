@@ -71,87 +71,92 @@ export default function SignupPage() {
       </div>
 
       {/* Right form panel */}
-      <div className="w-full lg:w-[55%] flex-shrink-0 flex flex-col px-8 lg:px-20 py-10">
+      <div className="w-full lg:w-[55%] flex-shrink-0 flex flex-col px-20 py-8">
         {/* Logo centered */}
-        <div className="flex justify-center">
+        <Link href="/" className="flex-shrink-0">
           <Image
             src="/assets/logo.png"
             alt="WeNav"
             width={110}
-            height={33}
-            className="mb-12"
-          />
-        </div>
+            height={33}/>
+        </Link>
 
         {/* Form */}
-        <div className="flex-1 flex flex-col justify-center max-w-[400px] mx-auto w-full">
-          <h1 className="text-4xl font-bold text-wenav-dark mb-2">
+        <div className="flex flex-col max-w-[500px] mx-auto w-full mt-40">
+          <h1 className="text-4xl font-bold text-wenav-dark mb-3">
             Create account
           </h1>
           <p className="text-sm text-gray-400 mb-8">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-wenav-dark font-semibold hover:underline"
-            >
+              className="text-wenav-dark font-medium hover:underline">
               Log in
             </Link>
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <AuthInput
-              id="name"
-              label="Name*"
-              value={name}
-              onChange={setName}
-              placeholder="Enter your name"
-              icon={User}
-            />
+          <form onSubmit={handleSubmit} className="space-y-2">
+            <div className="space-y-8">
+              <AuthInput
+                id="name"
+                label="Name"
+                value={name}
+                onChange={setName}
+                placeholder="Enter your name"
+                icon={User}
+              />
 
-            <AuthInput
-              id="email"
-              label="Email ID*"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              placeholder="Enter your email"
-              icon={Mail}
-            />
+              <AuthInput
+                id="email"
+                label="Email ID"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                placeholder="Enter your email"
+                icon={Mail}
+              />
 
-            <AuthInput
-              id="password"
-              label="Password"
-              type="password"
-              value={password}
-              onChange={setPassword}
-              placeholder="Enter your password"
-              icon={Lock}
-              hint="Must be at least 8 characters"
-            />
+              <AuthInput
+                id="password"
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                placeholder="Enter your password"
+                icon={Lock}
+              />
+            </div>
+
+            <div className="min-h-[20px]">
+              {error && (
+                <p className="text-red-400 text-sm font-medium">{error}</p>
+              )}
+            </div>
 
             {/* Terms checkbox */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-wenav-dark focus:ring-wenav-dark"
-              />
-              <span className="text-sm text-gray-600">
-                I agree with terms & conditions
-              </span>
-            </label>
+            <div className="space-y-3 mt-10">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="w-5 h-5 rounded ml-1 border-gray-300 text-wenav-dark focus:ring-wenav-dark"
+                />
+                <span className=" text-gray-500">
+                  I agree with terms & conditions
+                </span>
+              </label>
+            </div>
 
-            {error && (
-              <p className="text-red-500 text-sm font-medium">{error}</p>
-            )}
-
-            <Button
+            <div className="mt-40"> 
+              <Button
               type="submit"
               label={isSubmitting ? "Creating account..." : "Verify your email"}
               variant="filled"
               disabled={isSubmitting}
-            />
+              className="space-y-3 mt-4"
+              />
+            </div>
           </form>
         </div>
       </div>
