@@ -53,16 +53,18 @@ export default function ForgotPasswordPage() {
       {/* Left form panel */}
       <div className="w-full lg:w-[55%] flex-shrink-0 flex flex-col px-8 lg:px-20 py-10">
         {/* Logo */}
-        <Image
-          src="/assets/logo.png"
-          alt="WeNav"
-          width={110}
-          height={33}
-          className="mb-12"
-        />
+        <Link href="/" className="flex-shrink-0">
+          <Image
+            src="/assets/logo.png"
+            alt="WeNav"
+            width={110}
+            height={33}
+          />
+        </Link>
+
 
         {/* Form */}
-        <div className="flex-1 flex flex-col justify-center max-w-[400px] mx-auto w-full">
+        <div className="flex flex-col max-w-[500px] mx-auto w-full mt-40">
           <h1 className="text-4xl font-bold text-wenav-dark mb-2">
             Forgot Password?
           </h1>
