@@ -2,7 +2,7 @@
 
 export default function InfoSection() {
   return (
-    <section className="bg-white py-32 px-6">
+    <section id="content" className="bg-white py-32 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="rounded-[32px] sm:px-16 lg:px-24 py-20">
           

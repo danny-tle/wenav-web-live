@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function DownloadSection() {
   return (
@@ -26,9 +27,10 @@ export default function DownloadSection() {
             </div>
 
             <div className="mt-auto">
-              <button className="rounded-full bg-white text-black px-8 py-3 text-medium font-medium hover:bg-white/90 transition">
+              <Link href="/login" className="rounded-full bg-white text-black px-8 py-3 text-medium font-medium hover:bg-white/90 transition">
                 Login
-              </button>
+              </Link>
+
             </div>
           </div>
 
