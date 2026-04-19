@@ -45,18 +45,20 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-white">
       {/* Left form panel */}
-      <div className="w-full lg:w-[55%] flex-shrink-0 flex flex-col px-8 lg:px-20 py-10">
+      <div className="w-full lg:w-[55%] flex-shrink-0 flex flex-col px-20 py-8">
         {/* Logo */}
-        <Image
-          src="/assets/logo.png"
-          alt="WeNav"
-          width={110}
-          height={33}
-          className="mb-12"
-        />
+        <Link href="/" className="flex-shrink-0">
+          <Image
+            src="/assets/logo.png"
+            alt="WeNav"
+            width={110}
+            height={33}
+          />
+        
+        </Link>
 
         {/* Form */}
-        <div className="flex-1 flex flex-col justify-center max-w-[400px] mx-auto w-full">
+        <div className="flex-1 flex flex-col justify-center max-w-[500px] mx-auto w-full">
           <h1 className="text-4xl font-bold text-wenav-dark mb-10">
             Welcome Back!
           </h1>
@@ -81,19 +83,24 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 icon={Lock}
               />
-              <div className="text-right mt-1.5">
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  forgot password?
-                </Link>
-              </div>
-            </div>
 
-            {error && (
-              <p className="text-red-500 text-sm font-medium">{error}</p>
-            )}
+              {/* Error && Forgot Password? */}
+              <div className="mt-1.5 flex items-center justify-between mb-6" >
+                <div>
+                  {error && ( <p className="text-red-400 text-sm">{error}</p>
+                  )}
+                </div>
+
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-gray-400 hover:text-gray-600">
+                    forgot password?
+                  </Link>
+                </div>
+              </div>
+
+            </div>
 
             {/* Log in button */}
             <button
