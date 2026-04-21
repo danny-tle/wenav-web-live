@@ -8,6 +8,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp,
   Timestamp,
@@ -63,6 +64,22 @@ export function subscribeToIncidents(
   const q = query(collection(db, "incidents"), orderBy("reportedAt", "desc"));
   return onSnapshot(q, (snap) => {
     const incidents = snap.docs.map((d) => docToIncident(d.id, d.data()));
+    callback(incidents);
+  });
+}
+
+export function subscribeToUserIncidents(
+  userId: string,
+  callback: (incidents: Incident[]) => void
+): () => void {
+  const q = query(
+    collection(db, "incidents"),
+    where("reportedBy", "==", userId)
+  );
+  return onSnapshot(q, (snap) => {
+    const incidents = snap.docs
+      .map((d) => docToIncident(d.id, d.data()))
+      .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
     callback(incidents);
   });
 }

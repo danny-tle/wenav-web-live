@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
@@ -32,9 +32,11 @@ export default function MapWrapper({
   flyToLocation,
   flyToZoom = 14,
 }: MapWrapperProps) {
+  const mapKey = useRef(`map-${Date.now()}`).current;
   return (
     <div className={className}>
       <MapContainer
+        key={mapKey}
         center={center}
         zoom={zoom}
         scrollWheelZoom={scrollWheelZoom}

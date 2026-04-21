@@ -16,7 +16,7 @@ interface MockIncident {
   date: string;
   location: string;
   type: string;
-  status: "In-process" | "Completed";
+  status: "In-process" | "Completed" | "Rejected";
   lastUpdated: string;
   verificationNote: string;
 }
@@ -84,7 +84,7 @@ function firestoreToDisplay(inc: Incident): MockIncident {
     date: inc.reportedAt,
     location: inc.address,
     type: TYPE_LABELS[inc.type] ?? inc.type,
-    status: inc.status === "approved" ? "Completed" : "In-process",
+    status: inc.status === "approved" ? "Completed" : inc.status === "not_confirmed" ? "Rejected" : "In-process",
     lastUpdated: inc.lastUpdated ?? "",
     verificationNote: inc.verificationNote ?? "",
   };
@@ -118,7 +118,7 @@ export default function AdminIncidentsPage() {
     } else {
       setMockIncidents((prev) =>
         prev.map((inc) =>
-          inc.id === id ? { ...inc, status: "Completed" as const } : inc
+          inc.id === id ? { ...inc, status: (action === "confirm" ? "Completed" : "Rejected") as MockIncident["status"] } : inc
         )
       );
     }
@@ -196,6 +196,8 @@ export default function AdminIncidentsPage() {
                   className={`text-sm font-medium ${
                     incident.status === "In-process"
                       ? "text-orange-500"
+                      : incident.status === "Rejected"
+                      ? "text-red-500"
                       : "text-emerald-500"
                   }`}
                 >

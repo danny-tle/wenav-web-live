@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { FileText, Plus, MapPin, X, Loader } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { subscribeToIncidents, createIncident } from "@/lib/firestore";
+import { subscribeToUserIncidents, createIncident } from "@/lib/firestore";
 import { Incident } from "@/lib/types";
 
 const TYPE_OPTIONS: { value: Incident["type"]; label: string }[] = [
@@ -30,13 +30,13 @@ const STATUS_STYLES: Record<Incident["status"], string> = {
 
 const STATUS_LABELS: Record<Incident["status"], string> = {
   approved: "Approved",
-  not_confirmed: "Not Confirmed",
+  not_confirmed: "Rejected",
   under_review: "Under Review",
 };
 
 export default function IncidentsPage() {
   const { user } = useAuth();
-  const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
+  const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
   const [showModal, setShowModal] = useState(false);
 
   // Form state
@@ -50,11 +50,10 @@ export default function IncidentsPage() {
   const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
-    const unsub = subscribeToIncidents(setAllIncidents);
+    if (!user?.uid) return;
+    const unsub = subscribeToUserIncidents(user.uid, setUserIncidents);
     return unsub;
-  }, []);
-
-  const userIncidents = allIncidents.filter((inc) => inc.reportedBy === user?.uid);
+  }, [user?.uid]);
 
   function getGpsLocation() {
     setGpsLoading(true);
