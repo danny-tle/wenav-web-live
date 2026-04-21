@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LucideIcon } from "lucide-react";
+import { text } from "stream/consumers";
 
 interface AuthInputProps {
   id: string;
@@ -41,7 +42,12 @@ export default function AuthInput({
             : "border-gray-300"
         }`}
       >
-        <Icon size={16} className="text-gray-400 mr-3 flex-shrink-0" />
+        <Icon size={16}
+          className={`mr-3 flex-shrink-0 transition-colors ${
+            focused ? "text-blue-500" : "text-gray-400"
+          }`}
+        />
+
         <input
           id={id}
           type={type}
