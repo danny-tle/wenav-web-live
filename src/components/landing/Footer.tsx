@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -50,7 +51,7 @@ export default function Footer() {
                   </a>
                 </li>
                 <li>
-                  <a href="#overview" className="hover:opacity-80 transition-opacity">
+                  <a href="#content" className="hover:opacity-80 transition-opacity">
                     Overview
                   </a>
                 </li>
@@ -81,9 +82,9 @@ export default function Footer() {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
+                  <Link href="/login" className="hover:opacity-80 transition-opacity">
                     login
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
