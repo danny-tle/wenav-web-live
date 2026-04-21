@@ -53,16 +53,18 @@ export default function ForgotPasswordPage() {
       {/* Left form panel */}
       <div className="w-full lg:w-[55%] flex-shrink-0 flex flex-col px-8 lg:px-20 py-10">
         {/* Logo */}
-        <Image
-          src="/assets/logo.png"
-          alt="WeNav"
-          width={110}
-          height={33}
-          className="mb-12"
-        />
+        <Link href="/" className="flex-shrink-0">
+          <Image
+            src="/assets/logo.png"
+            alt="WeNav"
+            width={110}
+            height={33}
+          />
+        </Link>
+
 
         {/* Form */}
-        <div className="flex-1 flex flex-col justify-center max-w-[400px] mx-auto w-full">
+        <div className="flex flex-col max-w-[500px] mx-auto w-full mt-40">
           <h1 className="text-4xl font-bold text-wenav-dark mb-2">
             Forgot Password?
           </h1>
@@ -76,24 +78,12 @@ export default function ForgotPasswordPage() {
                 Password reset link sent to{" "}
                 <span className="font-semibold">{email}</span>. Check your inbox.
               </p>
-              <button
-                onClick={handleResend}
-                className="text-sm text-wenav-dark font-semibold hover:underline"
-              >
-                Resend link
-              </button>
-              <div className="pt-2">
-                <Link
-                  href="/login"
-                  className="text-sm text-gray-400 hover:text-gray-600"
-                >
-                  ← Back to login
-                </Link>
-              </div>
+
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <AuthInput
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="space-y-2">
+                <AuthInput
                 id="email"
                 label="Email"
                 type="email"
@@ -101,11 +91,14 @@ export default function ForgotPasswordPage() {
                 onChange={setEmail}
                 placeholder="Enter your email"
                 icon={Mail}
-              />
+                />
 
-              {error && (
-                <p className="text-red-500 text-sm font-medium">{error}</p>
-              )}
+                <div className="min-h-[20px]">
+                  {error && (
+                    <p className="text-red-400 text-sm font-medium">{error}</p>
+                  )}
+                </div>
+              </div>
 
               <Button
                 type="submit"
