@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
 
@@ -13,6 +13,7 @@ interface MapWrapperProps {
   scrollWheelZoom?: boolean;
   flyToLocation?: [number, number];
   flyToZoom?: number;
+  zoomPosition?: "topleft" | "topright" | "bottomleft" | "bottomright";
 }
 
 function MapFlyTo({ location, zoom }: { location: [number, number]; zoom: number }) {
@@ -31,6 +32,7 @@ export default function MapWrapper({
   scrollWheelZoom = true,
   flyToLocation,
   flyToZoom = 14,
+  zoomPosition = "topleft",
 }: MapWrapperProps) {
   const mapKey = useRef(`map-${Date.now()}`).current;
   return (
@@ -40,6 +42,7 @@ export default function MapWrapper({
         center={center}
         zoom={zoom}
         scrollWheelZoom={scrollWheelZoom}
+        zoomControl={false}
         className="h-full w-full rounded-wenav"
         attributionControl={true}
       >
@@ -47,6 +50,7 @@ export default function MapWrapper({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
+        <ZoomControl position={zoomPosition} />
         {flyToLocation && <MapFlyTo location={flyToLocation} zoom={flyToZoom} />}
         {children}
       </MapContainer>

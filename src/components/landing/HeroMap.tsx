@@ -94,14 +94,14 @@ export default function HeroMap() {
 
   return (
     <section id="home" className="relative w-full h-[100vh] pt-16">
-      <MapWrapper scrollWheelZoom={false} className="h-full w-full" flyToLocation={flyToLocation}>
+      <MapWrapper scrollWheelZoom={true} className="h-full w-full" flyToLocation={flyToLocation}>
         <ApprovedIncidentMarkers incidents={incidents} />
       </MapWrapper>
 
       {/* Search bar overlay */}
-      <div className="absolute top-20 left-0 right-0 z-[1000]">
+      <div className="absolute top-20 left-0 right-0 z-[1000] pointer-events-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div ref={dropdownRef} className="w-[420px] ml-10">
+          <div ref={dropdownRef} className="w-[420px] ml-10 pointer-events-auto">
             <div className="flex items-center bg-white rounded-wenav px-4 py-3 border border-gray-200 shadow-sm">
               <Search size={18} className="text-gray-400 mr-3 flex-shrink-0" />
               <input
