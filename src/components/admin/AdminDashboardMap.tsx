@@ -19,6 +19,7 @@ import {
   subscribeToHighRiskAreas,
   subscribeToUserProfiles,
   addHighRiskArea,
+  deleteHighRiskArea,
 } from "@/lib/firestore";
 import { Incident, HighRiskArea } from "@/lib/types";
 
@@ -219,9 +220,15 @@ export default function AdminDashboardMap() {
             icon={highRiskIcon}
           >
             <Popup>
-              <div className="text-sm">
+              <div className="text-sm min-w-[160px]">
                 <p className="font-semibold">High-Risk Area</p>
-                <p className="text-gray-500">{area.label}</p>
+                <p className="text-gray-500 mb-3">{area.label}</p>
+                <button
+                  onClick={() => deleteHighRiskArea(area.id)}
+                  className="w-full px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </Popup>
           </Marker>

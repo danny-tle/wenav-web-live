@@ -9,6 +9,15 @@ import {
 import userEvent from "@testing-library/user-event";
 import HeroMap from "@/components/landing/HeroMap";
 
+const mockSubscribeToIncidents = jest.fn((cb: (i: unknown[]) => void) => {
+  cb([]);
+  return jest.fn();
+});
+jest.mock("@/lib/firestore", () => ({
+  subscribeToIncidents: (...args: unknown[]) =>
+    mockSubscribeToIncidents(args[0] as (i: unknown[]) => void),
+}));
+
 // Stub next/dynamic so MapWrapper renders as a lightweight element
 jest.mock("next/dynamic", () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

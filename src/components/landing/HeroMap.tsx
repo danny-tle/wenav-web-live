@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { Search, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { subscribeToIncidents } from "@/lib/firestore";
+import { Incident } from "@/lib/types";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
@@ -12,6 +14,11 @@ const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
     </div>
   ),
 });
+
+const ApprovedIncidentMarkers = dynamic(
+  () => import("@/components/landing/ApprovedIncidentMarkers"),
+  { ssr: false }
+);
 
 interface NominatimResult {
   place_id: number;
@@ -26,7 +33,13 @@ export default function HeroMap() {
   const [loading, setLoading] = useState(false);
   const [flyToLocation, setFlyToLocation] = useState<[number, number] | undefined>(undefined);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsub = subscribeToIncidents(setIncidents);
+    return unsub;
+  }, []);
 
   // Debounced geocoding search via Nominatim
   useEffect(() => {
@@ -82,7 +95,7 @@ export default function HeroMap() {
   return (
     <section id="home" className="relative w-full h-[100vh] pt-16">
       <MapWrapper scrollWheelZoom={false} className="h-full w-full" flyToLocation={flyToLocation}>
-        {/* Markers will be added when Firestore is connected */}
+        <ApprovedIncidentMarkers incidents={incidents} />
       </MapWrapper>
 
       {/* Search bar overlay */}
