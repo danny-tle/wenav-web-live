@@ -85,6 +85,7 @@ function MapClickHandler({
 
 export default function AdminDashboardMap() {
   const { user } = useAuth();
+  const mapKey = useRef(`map-${Date.now()}`).current;
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [highRiskAreas, setHighRiskAreas] = useState<HighRiskArea[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -186,6 +187,7 @@ export default function AdminDashboardMap() {
   return (
     <div className="h-full w-full relative">
       <MapContainer
+        key={mapKey}
         center={MAP_DEFAULTS.center}
         zoom={MAP_DEFAULTS.zoom}
         scrollWheelZoom={true}
