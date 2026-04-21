@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { LucideIcon } from "lucide-react";
-import { text } from "stream/consumers";
 
 interface AuthInputProps {
   id: string;

@@ -40,14 +40,6 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleResend = async () => {
-    try {
-      await resetPassword(email);
-    } catch {
-      setError("Failed to resend. Please try again");
-    }
-  };
-
   return (
     <div className="flex min-h-screen bg-white">
       {/* Left form panel */}
