@@ -6,6 +6,7 @@ import {
   TileLayer,
   Marker,
   Popup,
+  ZoomControl,
   useMapEvents,
   useMap,
 } from "react-leaflet";
@@ -191,6 +192,7 @@ export default function AdminDashboardMap() {
         center={MAP_DEFAULTS.center}
         zoom={MAP_DEFAULTS.zoom}
         scrollWheelZoom={true}
+        zoomControl={false}
         className="h-full w-full"
       >
         <TileLayer
@@ -198,6 +200,7 @@ export default function AdminDashboardMap() {
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 
+        <ZoomControl position="topleft" />
         <MapClickHandler onMapClick={handleMapClick} />
         {flyToLocation && <MapFlyTo location={flyToLocation} zoom={15} />}
 
