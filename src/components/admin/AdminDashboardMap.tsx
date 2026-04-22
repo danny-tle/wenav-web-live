@@ -17,13 +17,11 @@ import { MapPin, Search, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
   subscribeToIncidents,
-  subscribeToHighRiskAreas,
   subscribeToUserProfiles,
-  addHighRiskArea,
-  deleteHighRiskArea,
+  createIncident,
   updateIncidentStatus,
 } from "@/lib/firestore";
-import { Incident, HighRiskArea } from "@/lib/types";
+import { Incident } from "@/lib/types";
 
 interface NominatimResult {
   place_id: number;
@@ -31,6 +29,26 @@ interface NominatimResult {
   lat: string;
   lon: string;
 }
+
+// ─── Type metadata ───────────────────────────────────────────────────────────
+
+const TYPE_OPTIONS: { value: Incident["type"]; label: string }[] = [
+  { value: "blocked_path", label: "Blocked Path" },
+  { value: "construction", label: "Under Construction" },
+  { value: "uneven_sidewalk", label: "Uneven Sidewalk" },
+  { value: "low_obstacle", label: "Low Obstacle" },
+  { value: "other", label: "Other" },
+];
+
+const TYPE_LABEL: Record<Incident["type"], string> = {
+  blocked_path: "Blocked Path",
+  construction: "Under Construction",
+  uneven_sidewalk: "Uneven Sidewalk",
+  low_obstacle: "Low Obstacle",
+  other: "Other",
+};
+
+// ─── Map helpers ─────────────────────────────────────────────────────────────
 
 function MapFlyTo({ location, zoom }: { location: [number, number]; zoom: number }) {
   const map = useMap();
@@ -45,7 +63,7 @@ interface PendingPin {
   lng: number;
 }
 
-// Red incident pin icon (approved)
+// Red icon — approved incidents (user- or admin-created).
 const incidentIcon = L.divIcon({
   html: `<div style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">
     <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
@@ -58,7 +76,8 @@ const incidentIcon = L.divIcon({
   className: "",
 });
 
-// Black incident pin icon (under review)
+// Black icon — pending (under_review) incidents. Used for both user-submitted
+// pending pins AND the admin's own just-dropped pin awaiting details.
 const pendingIncidentIcon = L.divIcon({
   html: `<div style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">
     <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
@@ -68,20 +87,6 @@ const pendingIncidentIcon = L.divIcon({
   </div>`,
   iconSize: [24, 32],
   iconAnchor: [12, 32],
-  className: "",
-});
-
-// High-risk area icon (larger, black with exclamation)
-const highRiskIcon = L.divIcon({
-  html: `<div style="width:36px;height:44px;display:flex;align-items:center;justify-content:center;">
-    <svg width="36" height="44" viewBox="0 0 36 44" fill="none">
-      <path d="M18 0C8.1 0 0 8.1 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.1 27.9 0 18 0z" fill="#0D0D0D"/>
-      <circle cx="18" cy="17" r="9" fill="white" stroke="#0D0D0D" stroke-width="2"/>
-      <text x="18" y="21" text-anchor="middle" font-size="14" font-weight="bold" fill="#0D0D0D">!</text>
-    </svg>
-  </div>`,
-  iconSize: [36, 44],
-  iconAnchor: [18, 44],
   className: "",
 });
 
@@ -98,14 +103,38 @@ function MapClickHandler({
   return null;
 }
 
+/// Reverse-geocodes a lat/lng to an address via OpenStreetMap Nominatim.
+/// Falls back to a coordinate string if the API call fails. Matches the
+/// behavior used by the mobile app so admin- and user-created incidents have
+/// the same address format.
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  const fallback = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    return (data?.display_name as string | undefined) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
 export default function AdminDashboardMap() {
   const { user } = useAuth();
   const mapKey = useRef(`map-${Date.now()}`).current;
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [highRiskAreas, setHighRiskAreas] = useState<HighRiskArea[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+
+  // Local state for the admin's "dropped but not yet saved" pin.
   const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
-  const [pinLabel, setPinLabel] = useState("");
+  const [pendingType, setPendingType] = useState<Incident["type"]>("blocked_path");
+  const [pendingDescription, setPendingDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Search state
   const [query, setQuery] = useState("");
@@ -115,14 +144,12 @@ export default function AdminDashboardMap() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Subscribe to Firestore incidents, high-risk areas, and users
+  // Subscribe to Firestore: incidents + user count.
   useEffect(() => {
     const unsubIncidents = subscribeToIncidents(setIncidents);
-    const unsubAreas = subscribeToHighRiskAreas(setHighRiskAreas);
     const unsubUsers = subscribeToUserProfiles((users) => setTotalUsers(users.length));
     return () => {
       unsubIncidents();
-      unsubAreas();
       unsubUsers();
     };
   }, []);
@@ -177,26 +204,38 @@ export default function AdminDashboardMap() {
   }
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    // First click: drop a black pending pin. No popup, no Firestore write.
+    // The admin clicks the pin itself to open the type/description form.
     setPendingPin({ lat, lng });
-    setPinLabel("");
+    setPendingType("blocked_path");
+    setPendingDescription("");
   }, []);
-
-  const confirmPin = async () => {
-    if (pendingPin && pinLabel.trim()) {
-      await addHighRiskArea({
-        lat: pendingPin.lat,
-        lng: pendingPin.lng,
-        label: pinLabel.trim(),
-        createdBy: user?.uid ?? "",
-      });
-      setPendingPin(null);
-      setPinLabel("");
-    }
-  };
 
   const cancelPin = () => {
     setPendingPin(null);
-    setPinLabel("");
+    setPendingDescription("");
+  };
+
+  const submitPin = async () => {
+    if (!pendingPin || submitting) return;
+    setSubmitting(true);
+    try {
+      const address = await reverseGeocode(pendingPin.lat, pendingPin.lng);
+      await createIncident({
+        type: pendingType,
+        status: "approved", // admin is the reviewer, so we skip under_review
+        location: { lat: pendingPin.lat, lng: pendingPin.lng },
+        address,
+        description: pendingDescription.trim(),
+        reportedBy: user?.uid ?? "admin",
+      });
+      setPendingPin(null);
+      setPendingDescription("");
+    } catch {
+      // Swallow silently for demo; in production we'd surface an error banner.
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -220,12 +259,19 @@ export default function AdminDashboardMap() {
 
         {/* Incident markers from Firestore */}
         {incidents.map((inc) => (
-          <Marker key={inc.id} position={[inc.location.lat, inc.location.lng]} icon={inc.status === "under_review" ? pendingIncidentIcon : incidentIcon}>
+          <Marker
+            key={inc.id}
+            position={[inc.location.lat, inc.location.lng]}
+            icon={inc.status === "under_review" ? pendingIncidentIcon : incidentIcon}
+          >
             <Popup>
               <div className="text-sm min-w-[180px]">
-                <p className="font-semibold">{inc.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+                <p className="font-semibold">{TYPE_LABEL[inc.type]}</p>
                 <p className="text-gray-500 text-xs mt-0.5">{inc.address}</p>
                 <p className="text-gray-400 text-xs mt-0.5">{inc.reportedAt}</p>
+                {inc.description && (
+                  <p className="text-gray-500 text-xs mt-1 italic">&ldquo;{inc.description}&rdquo;</p>
+                )}
                 {inc.status === "under_review" && (
                   <div className="flex gap-2 mt-3">
                     <button
@@ -252,58 +298,55 @@ export default function AdminDashboardMap() {
           </Marker>
         ))}
 
-        {/* High-risk area markers */}
-        {highRiskAreas.map((area) => (
-          <Marker
-            key={area.id}
-            position={[area.lat, area.lng]}
-            icon={highRiskIcon}
-          >
-            <Popup>
-              <div className="text-sm min-w-[160px]">
-                <p className="font-semibold">High-Risk Area</p>
-                <p className="text-gray-500 mb-3">{area.label}</p>
-                <button
-                  onClick={() => deleteHighRiskArea(area.id)}
-                  className="w-full px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-
-        {/* Pending pin */}
+        {/* Admin's pending pin — local state only. Clicking it opens the
+            type + description form; Submit saves as an approved incident. */}
         {pendingPin && (
           <Marker
             position={[pendingPin.lat, pendingPin.lng]}
-            icon={highRiskIcon}
+            icon={pendingIncidentIcon}
           >
             <Popup>
-              <div className="min-w-[200px]">
-                <p className="font-semibold text-sm mb-2">
-                  Mark as High-Risk Area
-                </p>
-                <input
-                  type="text"
-                  placeholder="Enter description..."
-                  value={pinLabel}
-                  onChange={(e) => setPinLabel(e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border rounded mb-2 outline-none focus:border-wenav-purple"
-                  autoFocus
-                  onKeyDown={(e) => e.key === "Enter" && confirmPin()}
+              <div className="min-w-[220px]">
+                <p className="font-semibold text-sm mb-2">New Incident</p>
+
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Type
+                </label>
+                <select
+                  value={pendingType}
+                  onChange={(e) => setPendingType(e.target.value as Incident["type"])}
+                  className="w-full px-2 py-1.5 text-sm border rounded mb-3 outline-none focus:border-wenav-purple"
+                >
+                  {TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Description <span className="font-normal normal-case text-gray-400">(optional)</span>
+                </label>
+                <textarea
+                  value={pendingDescription}
+                  onChange={(e) => setPendingDescription(e.target.value)}
+                  placeholder="Describe the hazard..."
+                  rows={2}
+                  className="w-full px-2 py-1.5 text-sm border rounded mb-3 outline-none focus:border-wenav-purple resize-none"
                 />
+
                 <div className="flex gap-2">
                   <button
-                    onClick={confirmPin}
-                    className="flex-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700"
+                    onClick={submitPin}
+                    disabled={submitting}
+                    className="flex-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Save
+                    {submitting ? "Saving…" : "Submit"}
                   </button>
                   <button
                     onClick={cancelPin}
-                    className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded hover:bg-gray-300"
+                    disabled={submitting}
+                    className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded hover:bg-gray-300 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -366,8 +409,10 @@ export default function AdminDashboardMap() {
           </span>
         </div>
         <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-red-400 font-medium">Saved high-risk areas</span>
-          <span className="text-sm font-bold text-wenav-dark">{highRiskAreas.length}</span>
+          <span className="text-sm text-red-400 font-medium">Approved Incidents</span>
+          <span className="text-sm font-bold text-wenav-dark">
+            {incidents.filter((i) => i.status === "approved").length}
+          </span>
         </div>
       </div>
 
@@ -375,7 +420,7 @@ export default function AdminDashboardMap() {
       {!pendingPin && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm rounded-wenav px-4 py-2 shadow-sm">
           <p className="text-xs text-gray-500">
-            Click anywhere on the map to add a high-risk area pin
+            Click anywhere on the map to add an incident, then click the pin to set type + description
           </p>
         </div>
       )}
