@@ -21,6 +21,7 @@ import {
   subscribeToUserProfiles,
   addHighRiskArea,
   deleteHighRiskArea,
+  updateIncidentStatus,
 } from "@/lib/firestore";
 import { Incident, HighRiskArea } from "@/lib/types";
 
@@ -44,11 +45,24 @@ interface PendingPin {
   lng: number;
 }
 
-// Red incident pin icon
+// Red incident pin icon (approved)
 const incidentIcon = L.divIcon({
   html: `<div style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">
     <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
       <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#DC2626"/>
+      <circle cx="12" cy="12" r="5" fill="white"/>
+    </svg>
+  </div>`,
+  iconSize: [24, 32],
+  iconAnchor: [12, 32],
+  className: "",
+});
+
+// Black incident pin icon (under review)
+const pendingIncidentIcon = L.divIcon({
+  html: `<div style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">
+    <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
+      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#0D0D0D"/>
       <circle cx="12" cy="12" r="5" fill="white"/>
     </svg>
   </div>`,
@@ -206,12 +220,33 @@ export default function AdminDashboardMap() {
 
         {/* Incident markers from Firestore */}
         {incidents.map((inc) => (
-          <Marker key={inc.id} position={[inc.location.lat, inc.location.lng]} icon={incidentIcon}>
+          <Marker key={inc.id} position={[inc.location.lat, inc.location.lng]} icon={inc.status === "under_review" ? pendingIncidentIcon : incidentIcon}>
             <Popup>
-              <div className="text-sm">
+              <div className="text-sm min-w-[180px]">
                 <p className="font-semibold">{inc.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
-                <p className="text-gray-500">{inc.address}</p>
-                <p className="text-gray-400 text-xs mt-1">{inc.reportedAt}</p>
+                <p className="text-gray-500 text-xs mt-0.5">{inc.address}</p>
+                <p className="text-gray-400 text-xs mt-0.5">{inc.reportedAt}</p>
+                {inc.status === "under_review" && (
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => updateIncidentStatus(inc.id, "approved")}
+                      className="flex-1 px-2 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => updateIncidentStatus(inc.id, "not_confirmed")}
+                      className="flex-1 px-2 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                    >
+                      Deny
+                    </button>
+                  </div>
+                )}
+                {inc.status !== "under_review" && (
+                  <p className={`text-xs font-semibold mt-2 ${inc.status === "approved" ? "text-emerald-600" : "text-red-500"}`}>
+                    {inc.status === "approved" ? "Approved" : "Denied"}
+                  </p>
+                )}
               </div>
             </Popup>
           </Marker>
