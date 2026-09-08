@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import ApprovedIncidentMarkers from "@/components/landing/ApprovedIncidentMarkers";
-import { Incident } from "@/lib/types";
+import { Incident, PublicIncident } from "@/lib/types";
 
 jest.mock("leaflet", () => ({
   divIcon: jest.fn(() => ({ options: {} })),
@@ -28,16 +28,13 @@ jest.mock("react-leaflet", () => ({
   ),
 }));
 
-function makeIncident(overrides: Partial<Incident> = {}): Incident {
+function makeIncident(overrides: Partial<PublicIncident> = {}): PublicIncident {
   return {
     id: "inc1",
     type: "blocked_path",
-    status: "approved",
     location: { lat: 40.76, lng: -111.89 },
     address: "123 Main St",
-    description: "",
     reportedAt: "April 21, 2026",
-    reportedBy: "user1",
     ...overrides,
   };
 }
@@ -48,32 +45,13 @@ describe("ApprovedIncidentMarkers", () => {
     expect(container.querySelector("[data-testid='marker']")).toBeNull();
   });
 
-  it("renders a marker for each approved incident", () => {
+  it("renders a marker for each public incident", () => {
     const incidents = [
-      makeIncident({ id: "a", status: "approved" }),
-      makeIncident({ id: "b", status: "approved" }),
+      makeIncident({ id: "a" }),
+      makeIncident({ id: "b" }),
     ];
     render(<ApprovedIncidentMarkers incidents={incidents} />);
     expect(screen.getAllByTestId("marker")).toHaveLength(2);
-  });
-
-  it("filters out non-approved incidents", () => {
-    const incidents = [
-      makeIncident({ id: "a", status: "approved" }),
-      makeIncident({ id: "b", status: "under_review" }),
-      makeIncident({ id: "c", status: "not_confirmed" }),
-    ];
-    render(<ApprovedIncidentMarkers incidents={incidents} />);
-    expect(screen.getAllByTestId("marker")).toHaveLength(1);
-  });
-
-  it("renders no markers when all incidents are under_review", () => {
-    const incidents = [
-      makeIncident({ id: "a", status: "under_review" }),
-      makeIncident({ id: "b", status: "under_review" }),
-    ];
-    const { container } = render(<ApprovedIncidentMarkers incidents={incidents} />);
-    expect(container.querySelector("[data-testid='marker']")).toBeNull();
   });
 
   it("places the marker at the correct lat/lng", () => {

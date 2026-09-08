@@ -1,5 +1,6 @@
 import { setGlobalOptions } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -108,3 +109,33 @@ export const verifyEmailCode = onCall(async (request) => {
 
   return { success: true };
 });
+
+/**
+ * Keeps the unauthenticated map isolated from private incident reports.
+ * Only fields needed by the map are copied; reporter identity, descriptions,
+ * and administrator notes remain in the private `incidents` collection.
+ */
+export const syncPublicIncident = onDocumentWritten(
+  "incidents/{incidentId}",
+  async (event) => {
+    const publicRef = db
+      .collection("publicIncidents")
+      .doc(event.params.incidentId);
+    const incident = event.data?.after;
+    const data = incident?.data();
+
+    if (!incident?.exists || !data || data.status !== "approved") {
+      await publicRef.delete();
+      return;
+    }
+
+    await publicRef.set({
+      type: data.type,
+      location: data.location,
+      address: data.address ?? "",
+      reportedAt: data.reportedAt ?? FieldValue.serverTimestamp(),
+      lastUpdated: data.lastUpdated ?? FieldValue.serverTimestamp(),
+      publishedAt: FieldValue.serverTimestamp(),
+    });
+  },
+);

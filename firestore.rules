@@ -3,41 +3,187 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && 'admin' in request.auth.token
+        && request.auth.token.admin == true;
+    }
+
+    function isIncidentType(type) {
+      return type in [
+        'blocked_path',
+        'construction',
+        'uneven_sidewalk',
+        'low_obstacle',
+        'other'
+      ];
+    }
+
+    function isIncidentStatus(status) {
+      return status in ['under_review', 'approved', 'not_confirmed'];
+    }
+
+    function isValidLocation(location) {
+      return location is map
+        && location.keys().hasAll(['lat', 'lng'])
+        && location.keys().hasOnly(['lat', 'lng'])
+        && (location.lat is int || location.lat is float)
+        && (location.lng is int || location.lng is float)
+        && location.lat >= -90
+        && location.lat <= 90
+        && location.lng >= -180
+        && location.lng <= 180;
+    }
+
+    function hasValidIncidentShape(data) {
+      return data.keys().hasAll([
+          'type',
+          'status',
+          'location',
+          'address',
+          'description',
+          'reportedBy',
+          'reportedAt',
+          'lastUpdated'
+        ])
+        && data.keys().hasOnly([
+          'type',
+          'status',
+          'location',
+          'address',
+          'description',
+          'reportedBy',
+          'reportedAt',
+          'lastUpdated',
+          'verificationNote'
+        ])
+        && isIncidentType(data.type)
+        && isIncidentStatus(data.status)
+        && isValidLocation(data.location)
+        && data.address is string
+        && data.address.size() <= 1000
+        && data.description is string
+        && data.description.size() <= 2000
+        && data.reportedBy is string
+        && data.reportedBy.size() > 0
+        && data.reportedAt is timestamp
+        && data.lastUpdated is timestamp
+        && (!('verificationNote' in data)
+          || (data.verificationNote is string
+            && data.verificationNote.size() <= 2000));
+    }
+
+    function isValidIncidentCreate() {
+      return hasValidIncidentShape(request.resource.data)
+        && request.resource.data.reportedBy == request.auth.uid
+        && request.resource.data.reportedAt == request.time
+        && request.resource.data.lastUpdated == request.time
+        && (request.resource.data.status == 'under_review'
+          || (isAdmin() && request.resource.data.status == 'approved'));
+    }
+
+    function isValidAdminReview() {
+      return hasValidIncidentShape(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'verificationNote',
+          'lastUpdated'
+        ])
+        && request.resource.data.lastUpdated == request.time;
+    }
+
+    function hasValidUserProfileShape(data) {
+      return data.keys().hasAll([
+          'displayName',
+          'email',
+          'role',
+          'createdAt',
+          'status'
+        ])
+        && data.keys().hasOnly([
+          'displayName',
+          'email',
+          'role',
+          'createdAt',
+          'status'
+        ])
+        && data.displayName is string
+        && data.displayName.size() > 0
+        && data.displayName.size() <= 100
+        && data.email is string
+        && data.email.size() > 0
+        && data.role in ['user', 'admin']
+        && data.createdAt is timestamp
+        && data.status in ['online', 'offline'];
+    }
+
+    function isValidUserProfileCreate(userId) {
+      return request.auth.uid == userId
+        && hasValidUserProfileShape(request.resource.data)
+        && 'email' in request.auth.token
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.role == (isAdmin() ? 'admin' : 'user');
+    }
+
+    function isValidUserProfileUpdate() {
+      return hasValidUserProfileShape(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'status'
+        ]);
+    }
+
     // Verification codes — only accessible via Cloud Functions (Admin SDK)
     match /verificationCodes/{email} {
       allow read, write: if false;
     }
 
-    // Incidents — public read for map display; only authenticated users can create; only admins can update/delete
+    // Private incident reports. Users own their reports; admins review them.
     match /incidents/{incidentId} {
+      allow get: if isSignedIn()
+        && (resource.data.reportedBy == request.auth.uid || isAdmin());
+      allow list: if isSignedIn()
+        && (resource.data.reportedBy == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidIncidentCreate();
+      allow update: if isAdmin() && isValidAdminReview();
+      allow delete: if isAdmin();
+    }
+
+    // Approved, sanitized documents published by trusted server-side code.
+    // Cloud Functions use the Admin SDK and bypass client security rules.
+    match /publicIncidents/{incidentId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null
-        && request.auth.token.email == "wenavapp@gmail.com";
+      allow write: if false;
     }
 
     // High-risk areas — admins can write; any authenticated user can read
     match /highRiskAreas/{areaId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null
-        && request.auth.token.email == "wenavapp@gmail.com";
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
-    // User profiles — users can read/write their own; admins can read all
+    // User profiles — role, email, and account creation time are immutable
+    // from the client after creation.
     match /users/{userId} {
-      allow read: if request.auth != null
-        && (request.auth.uid == userId
-          || request.auth.token.email == "wenavapp@gmail.com");
-      allow write: if request.auth != null
-        && (request.auth.uid == userId
-          || request.auth.token.email == "wenavapp@gmail.com");
+      allow get: if isSignedIn()
+        && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidUserProfileCreate(userId);
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidUserProfileUpdate();
+      allow delete: if false;
     }
 
     // Notifications — users can read/write their own subcollection
     match /users/{userId}/notifications/{notifId} {
-      allow read, write: if request.auth != null
-        && (request.auth.uid == userId
-          || request.auth.token.email == "wenavapp@gmail.com");
+      allow read, write: if isSignedIn()
+        && (request.auth.uid == userId || isAdmin());
     }
   }
 }
