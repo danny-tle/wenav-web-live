@@ -21,6 +21,15 @@ export interface Incident {
   lastUpdated?: string;
 }
 
+export interface PublicIncident {
+  id: string;
+  type: Incident["type"];
+  location: Coordinate;
+  address: string;
+  reportedAt: string;
+  lastUpdated?: string;
+}
+
 export interface TrackedUser {
   id: string;
   name: string;

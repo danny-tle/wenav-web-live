@@ -26,7 +26,10 @@ import { upsertUserProfile } from "@/lib/firestore";
 
 export type UserRole = "user" | "admin" | null;
 
-const ADMIN_EMAILS = ["wenavapp@gmail.com"];
+async function getUserRole(firebaseUser: User): Promise<Exclude<UserRole, null>> {
+  const token = await firebaseUser.getIdTokenResult();
+  return token.claims.admin === true ? "admin" : "user";
+}
 
 interface AuthContextType {
   user: User | null;
@@ -53,15 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        const userRole = await getUserRole(firebaseUser);
         setUser(firebaseUser);
         setIsLoggedIn(true);
-        setRole(ADMIN_EMAILS.includes(firebaseUser.email || "") ? "admin" : "user");
+        setRole(userRole);
         // Ensure a Firestore profile exists for this user (covers pre-existing Auth accounts)
         try {
           await upsertUserProfile(firebaseUser.uid, {
             displayName: firebaseUser.displayName ?? "Unknown",
             email: firebaseUser.email ?? "",
-            role: ADMIN_EMAILS.includes(firebaseUser.email || "") ? "admin" : "user",
+            role: userRole,
             status: "offline",
           });
         } catch (err) {
@@ -80,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<UserRole> => {
     const result = await signInWithEmailAndPassword(auth, email, password);
-    const userRole = ADMIN_EMAILS.includes(result.user.email || "") ? "admin" : "user";
+    const userRole = await getUserRole(result.user);
     setUser(result.user);
     setIsLoggedIn(true);
     setRole(userRole);
@@ -93,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await upsertUserProfile(result.user.uid, {
       displayName,
       email,
-      role: ADMIN_EMAILS.includes(email) ? "admin" : "user",
+      role: "user",
       status: "offline",
     });
     const sendCode = httpsCallable(functions, "sendVerificationCode");

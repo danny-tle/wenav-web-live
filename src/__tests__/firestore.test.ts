@@ -46,6 +46,7 @@ jest.mock("firebase/firestore", () => ({
 
 import {
   subscribeToIncidents,
+  subscribeToPublicIncidents,
   updateIncidentStatus,
   createIncident,
   subscribeToHighRiskAreas,
@@ -189,6 +190,50 @@ describe("subscribeToIncidents", () => {
     subscribeToIncidents(callback);
     const [incidents] = callback.mock.calls[0];
     expect(incidents.map((i: { id: string }) => i.id)).toEqual(["a", "b"]);
+  });
+});
+
+// ─── subscribeToPublicIncidents ──────────────────────────────────────────────
+
+describe("subscribeToPublicIncidents", () => {
+  it("queries the sanitized collection ordered by reportedAt desc", () => {
+    subscribeToPublicIncidents(jest.fn());
+    expect(mockCollection).toHaveBeenCalledWith(
+      expect.anything(),
+      "publicIncidents",
+    );
+    expect(mockOrderBy).toHaveBeenCalledWith("reportedAt", "desc");
+  });
+
+  it("maps sanitized documents without private reporter data", () => {
+    const callback = jest.fn();
+    mockOnSnapshot.mockImplementation(
+      (_q: unknown, cb: (snap: unknown) => void) => {
+        cb(
+          makeSnap([
+            {
+              id: "public-1",
+              data: {
+                type: "blocked_path",
+                location: { lat: 40.7, lng: -111.9 },
+                address: "Salt Lake City, Utah",
+                reportedAt: ts("2026-09-08T12:00:00Z"),
+                lastUpdated: ts("2026-09-08T12:05:00Z"),
+              },
+            },
+          ]),
+        );
+        return jest.fn();
+      },
+    );
+
+    subscribeToPublicIncidents(callback);
+
+    const incident = callback.mock.calls[0][0][0];
+    expect(incident.id).toBe("public-1");
+    expect(incident.location).toEqual({ lat: 40.7, lng: -111.9 });
+    expect(incident).not.toHaveProperty("reportedBy");
+    expect(incident).not.toHaveProperty("verificationNote");
   });
 });
 

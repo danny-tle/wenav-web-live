@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import { Search, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { subscribeToIncidents } from "@/lib/firestore";
-import { Incident } from "@/lib/types";
+import { subscribeToPublicIncidents } from "@/lib/firestore";
+import { PublicIncident } from "@/lib/types";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
@@ -33,11 +33,11 @@ export default function HeroMap() {
   const [loading, setLoading] = useState(false);
   const [flyToLocation, setFlyToLocation] = useState<[number, number] | undefined>(undefined);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [incidents, setIncidents] = useState<PublicIncident[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsub = subscribeToIncidents(setIncidents);
+    const unsub = subscribeToPublicIncidents(setIncidents);
     return unsub;
   }, []);
 

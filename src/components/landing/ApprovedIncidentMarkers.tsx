@@ -2,7 +2,7 @@
 
 import L from "leaflet";
 import { Marker, Popup } from "react-leaflet";
-import { Incident } from "@/lib/types";
+import { Incident, PublicIncident } from "@/lib/types";
 
 const TYPE_LABELS: Record<Incident["type"], string> = {
   blocked_path: "Blocked Path",
@@ -23,11 +23,10 @@ const pinIcon = L.divIcon({
   popupAnchor: [0, -50],
 });
 
-export default function ApprovedIncidentMarkers({ incidents }: { incidents: Incident[] }) {
+export default function ApprovedIncidentMarkers({ incidents }: { incidents: PublicIncident[] }) {
   return (
     <>
       {incidents
-        .filter((inc) => inc.status === "approved")
         .map((inc) => (
           <Marker
             key={inc.id}

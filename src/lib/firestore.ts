@@ -14,7 +14,13 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Incident, Coordinate, UserProfile, HighRiskArea } from "@/lib/types";
+import {
+  Incident,
+  Coordinate,
+  PublicIncident,
+  UserProfile,
+  HighRiskArea,
+} from "@/lib/types";
 
 // ─── Timestamp helpers ────────────────────────────────────────────────────────
 
@@ -81,6 +87,39 @@ export function subscribeToUserIncidents(
       .map((d) => docToIncident(d.id, d.data()))
       .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
     callback(incidents);
+  });
+}
+
+// ─── Public Incidents ────────────────────────────────────────────────────────
+
+// Public documents are sanitized by syncPublicIncident in Cloud Functions.
+function docToPublicIncident(
+  id: string,
+  data: Record<string, unknown>,
+): PublicIncident {
+  return {
+    id,
+    type: data.type as PublicIncident["type"],
+    location: data.location as Coordinate,
+    address: typeof data.address === "string" ? data.address : "",
+    reportedAt: formatTimestamp(data.reportedAt as Timestamp | undefined),
+    lastUpdated: formatTimestampShort(
+      data.lastUpdated as Timestamp | undefined,
+    ),
+  };
+}
+
+export function subscribeToPublicIncidents(
+  callback: (incidents: PublicIncident[]) => void,
+): () => void {
+  const q = query(
+    collection(db, "publicIncidents"),
+    orderBy("reportedAt", "desc"),
+  );
+  return onSnapshot(q, (snap) => {
+    callback(
+      snap.docs.map((d) => docToPublicIncident(d.id, d.data())),
+    );
   });
 }
 
