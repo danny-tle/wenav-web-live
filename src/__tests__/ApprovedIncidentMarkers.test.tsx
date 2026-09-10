@@ -1,30 +1,44 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import ApprovedIncidentMarkers from "@/components/landing/ApprovedIncidentMarkers";
 import { Incident, PublicIncident } from "@/lib/types";
 
-jest.mock("leaflet", () => ({
-  divIcon: jest.fn(() => ({ options: {} })),
-}));
-
-jest.mock("react-leaflet", () => ({
+// react-map-gl's Marker/Popup are siblings, not nested — a marker's onClick
+// selects it, and the popup only renders for whichever one is selected. The
+// mock mirrors that: clicking the marker mock invokes onClick like a real
+// map click would.
+jest.mock("react-map-gl/maplibre", () => ({
   Marker: ({
     children,
-    position,
+    latitude,
+    longitude,
+    onClick,
   }: {
     children: React.ReactNode;
-    position: [number, number];
+    latitude: number;
+    longitude: number;
+    onClick?: (e: { originalEvent: { stopPropagation: () => void } }) => void;
   }) => (
     <div
       data-testid="marker"
-      data-lat={position[0]}
-      data-lng={position[1]}
+      data-lat={latitude}
+      data-lng={longitude}
+      onClick={() => onClick?.({ originalEvent: { stopPropagation: () => {} } })}
     >
       {children}
     </div>
   ),
-  Popup: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="popup">{children}</div>
+  Popup: ({
+    children,
+    onClose,
+  }: {
+    children: React.ReactNode;
+    onClose?: () => void;
+  }) => (
+    <div data-testid="popup">
+      <button aria-label="Close popup" onClick={() => onClose?.()} />
+      {children}
+    </div>
   ),
 }));
 
@@ -64,31 +78,66 @@ describe("ApprovedIncidentMarkers", () => {
     expect(marker).toHaveAttribute("data-lng", "-111.891");
   });
 
-  it("shows the correct type label in the popup", () => {
+  it("does not show a popup until its marker is clicked", () => {
+    render(<ApprovedIncidentMarkers incidents={[makeIncident()]} />);
+    expect(screen.queryByTestId("popup")).not.toBeInTheDocument();
+  });
+
+  it("shows the correct type label in the popup after clicking the marker", () => {
     render(
       <ApprovedIncidentMarkers
         incidents={[makeIncident({ type: "construction" })]}
       />
     );
+    fireEvent.click(screen.getByTestId("marker"));
     expect(screen.getByText("Under Construction")).toBeInTheDocument();
   });
 
-  it("shows the address in the popup", () => {
+  it("shows the address in the popup after clicking the marker", () => {
     render(
       <ApprovedIncidentMarkers
         incidents={[makeIncident({ address: "456 Oak Ave, Salt Lake City" })]}
       />
     );
+    fireEvent.click(screen.getByTestId("marker"));
     expect(screen.getByText("456 Oak Ave, Salt Lake City")).toBeInTheDocument();
   });
 
-  it("shows the reportedAt date in the popup", () => {
+  it("shows the reportedAt date in the popup after clicking the marker", () => {
     render(
       <ApprovedIncidentMarkers
         incidents={[makeIncident({ reportedAt: "January 1, 2026" })]}
       />
     );
+    fireEvent.click(screen.getByTestId("marker"));
     expect(screen.getByText("January 1, 2026")).toBeInTheDocument();
+  });
+
+  it("only shows one popup at a time when multiple markers are clicked", () => {
+    render(
+      <ApprovedIncidentMarkers
+        incidents={[
+          makeIncident({ id: "a", address: "First St" }),
+          makeIncident({ id: "b", address: "Second St" }),
+        ]}
+      />
+    );
+    const markers = screen.getAllByTestId("marker");
+    fireEvent.click(markers[0]);
+    expect(screen.getByText("First St")).toBeInTheDocument();
+
+    fireEvent.click(markers[1]);
+    expect(screen.getByText("Second St")).toBeInTheDocument();
+    expect(screen.queryByText("First St")).not.toBeInTheDocument();
+  });
+
+  it("closes the popup when its close control fires onClose", () => {
+    render(<ApprovedIncidentMarkers incidents={[makeIncident({ address: "Close Me St" })]} />);
+    fireEvent.click(screen.getByTestId("marker"));
+    expect(screen.getByText("Close Me St")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Close popup"));
+    expect(screen.queryByTestId("popup")).not.toBeInTheDocument();
   });
 
   it("renders correct type labels for all incident types", () => {
@@ -113,6 +162,7 @@ describe("ApprovedIncidentMarkers", () => {
           incidents={[makeIncident({ id: type, type })]}
         />
       );
+      fireEvent.click(screen.getByTestId("marker"));
       expect(screen.getByText(expectedLabels[i])).toBeInTheDocument();
       unmount();
     });

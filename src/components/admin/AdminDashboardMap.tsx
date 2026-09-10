@@ -1,18 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  ZoomControl,
-  useMapEvents,
-  useMap,
-} from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { Map as MapGL, Marker, Popup, NavigationControl, MapRef } from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
+import { MAP_STYLE, TILTED_PITCH } from "@/lib/mapStyle";
+import { useMapCamera } from "@/lib/useMapCamera";
 import { MapPin, Search, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
@@ -48,59 +41,30 @@ const TYPE_LABEL: Record<Incident["type"], string> = {
   other: "Other",
 };
 
-// ─── Map helpers ─────────────────────────────────────────────────────────────
-
-function MapFlyTo({ location, zoom }: { location: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo(location, zoom, { duration: 1.5 });
-  }, [location, zoom, map]);
-  return null;
-}
-
 interface PendingPin {
   lat: number;
   lng: number;
 }
 
-// Red icon — approved incidents (user- or admin-created).
-const incidentIcon = L.divIcon({
-  html: `<div style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">
-    <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
-      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#DC2626"/>
-      <circle cx="12" cy="12" r="5" fill="white"/>
+// Red pin — approved incidents (user- or admin-created).
+function IncidentPin() {
+  return (
+    <svg width={24} height={32} viewBox="0 0 24 32" fill="none">
+      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#DC2626" />
+      <circle cx="12" cy="12" r="5" fill="white" />
     </svg>
-  </div>`,
-  iconSize: [24, 32],
-  iconAnchor: [12, 32],
-  className: "",
-});
+  );
+}
 
-// Black icon — pending (under_review) incidents. Used for both user-submitted
+// Black pin — pending (under_review) incidents. Used for both user-submitted
 // pending pins AND the admin's own just-dropped pin awaiting details.
-const pendingIncidentIcon = L.divIcon({
-  html: `<div style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">
-    <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
-      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#0D0D0D"/>
-      <circle cx="12" cy="12" r="5" fill="white"/>
+function PendingPin() {
+  return (
+    <svg width={24} height={32} viewBox="0 0 24 32" fill="none">
+      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#0D0D0D" />
+      <circle cx="12" cy="12" r="5" fill="white" />
     </svg>
-  </div>`,
-  iconSize: [24, 32],
-  iconAnchor: [12, 32],
-  className: "",
-});
-
-function MapClickHandler({
-  onMapClick,
-}: {
-  onMapClick: (lat: number, lng: number) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
+  );
 }
 
 /// Reverse-geocodes a lat/lng to an address via OpenStreetMap Nominatim.
@@ -126,12 +90,19 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 
 export default function AdminDashboardMap() {
   const { user } = useAuth();
-  const mapKey = useRef(`map-${Date.now()}`).current;
+  const mapRef = useRef<MapRef>(null);
+  const { flyToLocation: flyTo, syncPitchToZoom } = useMapCamera(mapRef);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
 
-  // Local state for the admin's "dropped but not yet saved" pin.
+  // Which existing incident's popup is open (approve/deny), if any.
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+
+  // Local state for the admin's "dropped but not yet saved" pin. Dropping the
+  // pin is a separate step from opening its form — matches the two-click flow
+  // this map has always had (click map to drop pin, click pin to fill it in).
   const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
+  const [showPendingForm, setShowPendingForm] = useState(false);
   const [pendingType, setPendingType] = useState<Incident["type"]>("blocked_path");
   const [pendingDescription, setPendingDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -153,6 +124,12 @@ export default function AdminDashboardMap() {
       unsubUsers();
     };
   }, []);
+
+  // Fly the camera to a searched location, ending in the tilted 3D view.
+  useEffect(() => {
+    if (!flyToLocation) return;
+    flyTo(flyToLocation[0], flyToLocation[1]);
+  }, [flyToLocation, flyTo]);
 
   // Debounced geocoding search via Nominatim
   useEffect(() => {
@@ -207,12 +184,14 @@ export default function AdminDashboardMap() {
     // First click: drop a black pending pin. No popup, no Firestore write.
     // The admin clicks the pin itself to open the type/description form.
     setPendingPin({ lat, lng });
+    setShowPendingForm(false);
     setPendingType("blocked_path");
     setPendingDescription("");
   }, []);
 
   const cancelPin = () => {
     setPendingPin(null);
+    setShowPendingForm(false);
     setPendingDescription("");
   };
 
@@ -230,6 +209,7 @@ export default function AdminDashboardMap() {
         reportedBy: user?.uid ?? "admin",
       });
       setPendingPin(null);
+      setShowPendingForm(false);
       setPendingDescription("");
     } catch {
       // Swallow silently for demo; in production we'd surface an error banner.
@@ -238,124 +218,156 @@ export default function AdminDashboardMap() {
     }
   };
 
+  const selectedIncident = incidents.find((inc) => inc.id === selectedIncidentId) ?? null;
+
   return (
     <div className="h-full w-full relative">
-      <MapContainer
-        key={mapKey}
-        center={MAP_DEFAULTS.center}
-        zoom={MAP_DEFAULTS.zoom}
-        scrollWheelZoom={true}
-        zoomControl={false}
-        className="h-full w-full"
+      <MapGL
+        ref={mapRef}
+        initialViewState={{
+          latitude: MAP_DEFAULTS.center[0],
+          longitude: MAP_DEFAULTS.center[1],
+          zoom: MAP_DEFAULTS.zoom,
+        }}
+        mapStyle={MAP_STYLE}
+        style={{ width: "100%", height: "100%" }}
+        maxPitch={TILTED_PITCH}
+        onClick={(e) => handleMapClick(e.lngLat.lat, e.lngLat.lng)}
+        onZoomEnd={syncPitchToZoom}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        />
-
-        <ZoomControl position="topleft" />
-        <MapClickHandler onMapClick={handleMapClick} />
-        {flyToLocation && <MapFlyTo location={flyToLocation} zoom={15} />}
+        <NavigationControl position="top-left" showCompass visualizePitch />
 
         {/* Incident markers from Firestore */}
         {incidents.map((inc) => (
           <Marker
             key={inc.id}
-            position={[inc.location.lat, inc.location.lng]}
-            icon={inc.status === "under_review" ? pendingIncidentIcon : incidentIcon}
+            longitude={inc.location.lng}
+            latitude={inc.location.lat}
+            anchor="bottom"
+            onClick={(e) => {
+              e.originalEvent.stopPropagation();
+              setSelectedIncidentId(inc.id);
+            }}
           >
-            <Popup>
-              <div className="text-sm min-w-[180px]">
-                <p className="font-semibold">{TYPE_LABEL[inc.type]}</p>
-                <p className="text-gray-500 text-xs mt-0.5">{inc.address}</p>
-                <p className="text-gray-400 text-xs mt-0.5">{inc.reportedAt}</p>
-                {inc.description && (
-                  <p className="text-gray-500 text-xs mt-1 italic">&ldquo;{inc.description}&rdquo;</p>
-                )}
-                {inc.status === "under_review" && (
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => updateIncidentStatus(inc.id, "approved")}
-                      className="flex-1 px-2 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => updateIncidentStatus(inc.id, "not_confirmed")}
-                      className="flex-1 px-2 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
-                    >
-                      Deny
-                    </button>
-                  </div>
-                )}
-                {inc.status !== "under_review" && (
-                  <p className={`text-xs font-semibold mt-2 ${inc.status === "approved" ? "text-emerald-600" : "text-red-500"}`}>
-                    {inc.status === "approved" ? "Approved" : "Denied"}
-                  </p>
-                )}
-              </div>
-            </Popup>
+            {inc.status === "under_review" ? <PendingPin /> : <IncidentPin />}
           </Marker>
         ))}
+
+        {selectedIncident && (
+          <Popup
+            longitude={selectedIncident.location.lng}
+            latitude={selectedIncident.location.lat}
+            anchor="bottom"
+            offset={32}
+            closeOnClick={false}
+            onClose={() => setSelectedIncidentId(null)}
+          >
+            <div className="text-sm min-w-[180px]">
+              <p className="font-semibold">{TYPE_LABEL[selectedIncident.type]}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{selectedIncident.address}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{selectedIncident.reportedAt}</p>
+              {selectedIncident.description && (
+                <p className="text-gray-500 text-xs mt-1 italic">&ldquo;{selectedIncident.description}&rdquo;</p>
+              )}
+              {selectedIncident.status === "under_review" && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => updateIncidentStatus(selectedIncident.id, "approved")}
+                    className="flex-1 px-2 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => updateIncidentStatus(selectedIncident.id, "not_confirmed")}
+                    className="flex-1 px-2 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                  >
+                    Deny
+                  </button>
+                </div>
+              )}
+              {selectedIncident.status !== "under_review" && (
+                <p className={`text-xs font-semibold mt-2 ${selectedIncident.status === "approved" ? "text-emerald-600" : "text-red-500"}`}>
+                  {selectedIncident.status === "approved" ? "Approved" : "Denied"}
+                </p>
+              )}
+            </div>
+          </Popup>
+        )}
 
         {/* Admin's pending pin — local state only. Clicking it opens the
             type + description form; Submit saves as an approved incident. */}
         {pendingPin && (
           <Marker
-            position={[pendingPin.lat, pendingPin.lng]}
-            icon={pendingIncidentIcon}
+            longitude={pendingPin.lng}
+            latitude={pendingPin.lat}
+            anchor="bottom"
+            onClick={(e) => {
+              e.originalEvent.stopPropagation();
+              setShowPendingForm(true);
+            }}
           >
-            <Popup>
-              <div className="min-w-[220px]">
-                <p className="font-semibold text-sm mb-2">New Incident</p>
-
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Type
-                </label>
-                <select
-                  value={pendingType}
-                  onChange={(e) => setPendingType(e.target.value as Incident["type"])}
-                  className="w-full px-2 py-1.5 text-sm border rounded mb-3 outline-none focus:border-wenav-purple"
-                >
-                  {TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Description <span className="font-normal normal-case text-gray-400">(optional)</span>
-                </label>
-                <textarea
-                  value={pendingDescription}
-                  onChange={(e) => setPendingDescription(e.target.value)}
-                  placeholder="Describe the hazard..."
-                  rows={2}
-                  className="w-full px-2 py-1.5 text-sm border rounded mb-3 outline-none focus:border-wenav-purple resize-none"
-                />
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={submitPin}
-                    disabled={submitting}
-                    className="flex-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? "Saving…" : "Submit"}
-                  </button>
-                  <button
-                    onClick={cancelPin}
-                    disabled={submitting}
-                    className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded hover:bg-gray-300 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </Popup>
+            <PendingPin />
           </Marker>
         )}
-      </MapContainer>
+
+        {pendingPin && showPendingForm && (
+          <Popup
+            longitude={pendingPin.lng}
+            latitude={pendingPin.lat}
+            anchor="bottom"
+            offset={32}
+            closeOnClick={false}
+            onClose={cancelPin}
+          >
+            <div className="min-w-[220px]">
+              <p className="font-semibold text-sm mb-2">New Incident</p>
+
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                Type
+              </label>
+              <select
+                value={pendingType}
+                onChange={(e) => setPendingType(e.target.value as Incident["type"])}
+                className="w-full px-2 py-1.5 text-sm border rounded mb-3 outline-none focus:border-wenav-purple"
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                Description <span className="font-normal normal-case text-gray-400">(optional)</span>
+              </label>
+              <textarea
+                value={pendingDescription}
+                onChange={(e) => setPendingDescription(e.target.value)}
+                placeholder="Describe the hazard..."
+                rows={2}
+                className="w-full px-2 py-1.5 text-sm border rounded mb-3 outline-none focus:border-wenav-purple resize-none"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  onClick={submitPin}
+                  disabled={submitting}
+                  className="flex-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Saving…" : "Submit"}
+                </button>
+                <button
+                  onClick={cancelPin}
+                  disabled={submitting}
+                  className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </Popup>
+        )}
+      </MapGL>
 
       {/* Top right overlay: search + stats */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3 w-72">
