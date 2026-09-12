@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Eye, EyeOff } from "lucide-react";
 
 interface AuthInputProps {
   id: string;
@@ -25,6 +25,9 @@ export default function AuthInput({
   hint,
 }: AuthInputProps) {
   const [focused, setFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const inputType = type === "password" && showPassword ? "text" : type;
 
   return (
     <div>
@@ -49,7 +52,7 @@ export default function AuthInput({
 
         <input
           id={id}
-          type={type}
+          type={inputType}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
@@ -57,10 +60,25 @@ export default function AuthInput({
           placeholder={placeholder}
           className="flex-1 outline-none text-sm text-gray-700 placeholder:text-gray-400"
         />
-      </div>
-      {hint && (
-        <p className="text-xs text-gray-400 mt-1.5">{hint}</p>
-      )}
+
+        {type === "password" && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <EyeOff size={18} />
+            ) : (
+              <Eye size={18} />
+            )}
+          </button>)}
+
+        </div>
+        {hint && (
+          <p className="text-xs text-gray-400 mt-1.5">{hint}</p>
+        )}
     </div>
   );
 }
