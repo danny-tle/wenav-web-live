@@ -57,8 +57,8 @@ export default function LoginPage() {
         </Link>
 
         {/* Form */}
-        <div className="flex flex-col max-w-[500px] mx-auto w-full mt-20">
-          <h1 className="text-4xl font-bold text-wenav-dark mb-10">
+        <div className="flex flex-col max-w-[500px] mx-auto w-full mt-14">
+          <h1 className="text-3xl font-bold text-wenav-dark mb-6">
             Welcome Back!
           </h1>
 
