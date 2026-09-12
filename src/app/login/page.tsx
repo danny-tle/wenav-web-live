@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import AuthInput from "@/components/shared/AuthInput";
 
 export default function LoginPage() {

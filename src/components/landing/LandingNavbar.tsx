@@ -5,9 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { NAV_LINKS } from "@/lib/constants";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export default function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isLoggedIn, isLoading, role } = useAuth();
+
+  const myPageHref = role === "admin" ? "/admin" : "/dashboard";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[2000] bg-white/90 backdrop-blur-sm border-b border-gray-100">
@@ -37,14 +41,16 @@ export default function LandingNavbar() {
             ))}
           </div>
 
-          {/* Login button */}
+          {/* Login button / My Page button*/}
           <div className="hidden md:block">
-            <Link
-              href="/login"
-              className="px-5 py-2 bg-wenav-dark text-white text-sm font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors"
-            >
-              Login
-            </Link>
+            {!isLoading && (
+              <Link
+                href={isLoggedIn ? myPageHref : "/login"}
+                className="px-5 py-2 bg-wenav-dark text-white text-sm font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors"
+              >
+              {isLoggedIn ? "My Page":"Login"}
+              </Link>
+            )}
           </div>
 
           {/* Mobile hamburger */}
