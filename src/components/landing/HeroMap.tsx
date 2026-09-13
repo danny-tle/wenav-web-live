@@ -9,7 +9,7 @@ import { PublicIncident } from "@/lib/types";
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full bg-wenav-gray animate-pulse rounded-wenav flex items-center justify-center">
+    <div className="w-full z-10 h-full bg-wenav-gray animate-pulse rounded-wenav flex items-center justify-center">
       <p className="text-gray-400">Loading map...</p>
     </div>
   ),

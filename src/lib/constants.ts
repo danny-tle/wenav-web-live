@@ -79,8 +79,8 @@ export const FEATURES: Feature[] = [
 
 export const NAV_LINKS = [
   { label: "Home", href: "#home" },
-  { label: "Download", href: "#download" },
-  { label: "Content", href: "#content" },
+  { label: "Info", href: "#content" },
   { label: "Features", href: "#features" },
   { label: "Team", href: "#team" },
+  { label: "Download", href: "#download" },
 ];
