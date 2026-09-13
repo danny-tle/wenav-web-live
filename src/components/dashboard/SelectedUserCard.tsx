@@ -1,17 +1,17 @@
 import Card from "@/components/shared/Card";
-import type { User } from "@/components/dashboard/UserList";
+import type { TrackedUser } from "@/lib/types";
 
 type SelectedUserCardProps = {
-  user: User;
+  user: TrackedUser;
 };
 
 export default function SelectedUserCard({
   user,
 }: SelectedUserCardProps) {
   const statusColor =
-    user.status === "ACTIVE"
+    user.status === "walking"
       ? "bg-green-500"
-      : user.status === "IDLE"
+      : user.status === "idle"
         ? "bg-orange-400"
         : "bg-gray-400";
 
@@ -25,9 +25,9 @@ export default function SelectedUserCard({
         <div className="flex items-center gap-3">
           {/* Profile */}
           <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-purple-300">
-            {user.profileImage ? (
+            {user.avatar ? (
               <img
-                src={user.profileImage}
+                src={user.avatar}
                 alt={user.name}
                 className="h-full w-full object-cover"
               />
@@ -65,7 +65,7 @@ export default function SelectedUserCard({
         </span>
 
         <span className="text-gray-500">
-          {user.battery}%
+          {user.vestBattery}%
         </span>
       </div>
     </Card>

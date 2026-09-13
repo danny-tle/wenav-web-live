@@ -11,14 +11,7 @@ import {
 } from "react-leaflet";
 
 import { MAP_DEFAULTS } from "@/lib/constants";
-
-
-type RiskArea = {
-  id: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-};
+import type { HighRiskArea } from "@/lib/types";
 
 interface MapWrapperProps {
   children?: ReactNode;
@@ -29,7 +22,7 @@ interface MapWrapperProps {
   flyToLocation?: [number, number];
   flyToZoom?: number;
   zoomPosition?: "topleft" | "topright" | "bottomleft" | "bottomright";
-  riskAreas?: RiskArea[];
+  riskAreas?: HighRiskArea[];
 }
 
 function MapFlyTo({
@@ -61,12 +54,12 @@ export default function MapWrapper({
   zoomPosition = "topleft",
   riskAreas = [],
 }: MapWrapperProps) {
-  const mapKey = useRef(`map-${Date.now()}`).current;
+  // const mapKey = useRef(`map-${Date.now()}`).current;
 
   return (
     <div className={className}>
       <MapContainer
-        key={mapKey}
+        // key={mapKey}
         center={center}
         zoom={zoom}
         scrollWheelZoom={scrollWheelZoom}
@@ -92,7 +85,7 @@ export default function MapWrapper({
         {riskAreas.map((area) => (
           <CircleMarker
             key={area.id}
-            center={[area.latitude, area.longitude]}
+            center={[area.lat, area.lng]}
             radius={10}
             pathOptions={{
               color: "#ef4444",
@@ -103,7 +96,7 @@ export default function MapWrapper({
           >
             <Popup>
               <p className="font-medium">Risk Area</p>
-              <p>{area.address}</p>
+              <p>{area.label}</p>
             </Popup>
           </CircleMarker>
         ))}

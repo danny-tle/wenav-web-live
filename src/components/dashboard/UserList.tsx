@@ -1,18 +1,10 @@
 import Card from "@/components/shared/Card";
-
-export type User = {
-  id: string;
-  name: string;
-  status: "ACTIVE" | "IDLE" | "OFFLINE";
-  profileImage: string | null;
-  battery: number;
-  lastUpdated: string;
-};
+import type { TrackedUser } from "@/lib/types";
 
 type UserListProps = {
-  users: User[];
+  users: TrackedUser[];
   selectedUserId: string | null;
-  onSelectUser: (user: User) => void;
+  onSelectUser: (user: TrackedUser) => void;
 };
 
 export default function UserList({
@@ -44,9 +36,9 @@ export default function UserList({
               >
                 {/* Profile */}
                 <div className="h-9 w-9 text-gray-800 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
-                  {user.profileImage ? (
+                  {user.avatar ? (
                     <img
-                      src={user.profileImage}
+                      src={user.avatar}
                       alt={user.name}
                       className="h-full w-full object-cover"
                     />
@@ -64,9 +56,9 @@ export default function UserList({
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`h-2 w-2 rounded-full ${
-                        user.status === "ACTIVE"
+                        user.status === "walking"
                           ? "bg-green-500"
-                          : user.status === "IDLE"
+                          : user.status === "idle"
                             ? "bg-orange-400"
                             : "bg-gray-400"
                       }`}

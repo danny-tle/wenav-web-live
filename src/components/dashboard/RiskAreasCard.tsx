@@ -1,15 +1,9 @@
 import Card from "@/components/shared/Card";
-
-export type RiskArea = {
-  id: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-};
+import type { HighRiskArea } from "@/lib/types";
 
 type RiskAreasCardProps = {
-  areas: RiskArea[];
-  onSelectArea: (area: RiskArea) => void;
+  areas: HighRiskArea[];
+  onSelectArea: (area: HighRiskArea) => void;
 };
 
 export default function RiskAreasCard({
@@ -35,7 +29,7 @@ export default function RiskAreasCard({
                 onClick={() => onSelectArea(area)}
                 className="w-full rounded-lg px-2 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-purple-50"
               >
-                {area.address}
+                {area.label}
               </button>
             </li>
           ))}

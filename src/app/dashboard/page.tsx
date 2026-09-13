@@ -3,42 +3,62 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { MapPin } from "lucide-react";
+import type {
+  TrackedUser,
+  HighRiskArea,
+} from "@/lib/types";
 
-import UserList, {type User,} from "@/components/dashboard/UserList";
+import UserList from "@/components/dashboard/UserList";
 import SelectedUserCard from "@/components/dashboard/SelectedUserCard";
-import RiskAreasCard, { type RiskArea, } from "@/components/dashboard/RiskAreasCard";
+import RiskAreasCard from "@/components/dashboard/RiskAreasCard";
 
-const users: User[] = [
+const users: TrackedUser[] = [
   {
     id: "1",
     name: "Alex Johnson",
-    status: "ACTIVE",
-    profileImage: null,
-    battery: 78,
+    status: "walking",
+    avatar: undefined,
+    lastLocation: {
+      lat: 40.7608,
+      lng: -111.891,
+    },
     lastUpdated: "2 min ago",
+    route: [],
+    vestBattery: 78,
+    vestConnected: true,
   },
   {
     id: "2",
     name: "Jamie Lee",
-    status: "IDLE",
-    profileImage: null,
-    battery: 89,
+    status: "idle",
+    avatar: undefined,
+    lastLocation: {
+      lat: 40.767,
+      lng: -111.884,
+    },
     lastUpdated: "5 min ago",
+    route: [],
+    vestBattery: 89,
+    vestConnected: true,
   },
 ];
 
-const riskAreas: RiskArea[] = [
+const riskAreas: HighRiskArea[] = [
   {
     id: "risk-1",
-    address: "234 Main St, Salt Lake City, UT",
-    latitude: 40.7608,
-    longitude: -111.891,
+    label: "234 Main St, Salt Lake City, UT",
+    lat: 40.7608,
+    lng: -111.891,
+    createdBy: "system",
+    createdAt: "2026-09-12T12:00:00Z",
   },
   {
     id: "risk-2",
-    address: "742 Evergreen Terrace, Salt Lake City, UT",
-    latitude: 40.767,
-    longitude: -111.884,
+    label: "742 Evergreen Terrace, Salt Lake City, UT",
+    lat: 40.767,
+    lng: -111.884,
+    createdBy: "system",
+    createdAt: "2026-09-12T12:00:00Z",
   },
 ];
 
@@ -54,10 +74,10 @@ const MapWrapper = dynamic(
 
 export default function DashboardPage() {
   const [selectedUser, setSelectedUser] =
-    useState<User | null>(null);
+    useState<TrackedUser | null>(null);
 
   const [selectedRiskArea, setSelectedRiskArea] =
-    useState<RiskArea | null>(null);
+    useState<HighRiskArea | null>(null);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -66,12 +86,7 @@ export default function DashboardPage() {
         riskAreas={riskAreas}
         flyToLocation={
           selectedRiskArea
-            ? [
-                selectedRiskArea.latitude,
-                selectedRiskArea.longitude,
-              ]
-            : undefined
-        }
+            ? [selectedRiskArea.lat,selectedRiskArea.lng,]: undefined}
         flyToZoom={16}
       />
 

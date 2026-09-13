@@ -36,9 +36,11 @@ export interface TrackedUser {
   avatar?: string;
   status: "walking" | "idle" | "offline";
   lastLocation: Coordinate;
+  lastUpdated: string;
   route: Coordinate[];
   vestBattery: number;
   vestConnected: boolean;
+
 }
 
 export interface Notification {
