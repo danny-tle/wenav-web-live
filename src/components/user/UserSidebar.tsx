@@ -48,7 +48,7 @@ export default function UserSidebar() {
   const [showNotifications, setShowNotifications] =
     useState(false);
 
-  // 사이드바 열림/닫힘
+  // Sidebar open/close
   const [isOpen, setIsOpen] = useState(false);
 
   const displayName = user?.displayName || "User";
@@ -96,7 +96,7 @@ export default function UserSidebar() {
               )}
             </button>
 
-            {/* 오른쪽 알림 버튼 */}
+            {/* Right side notification */}
             {isOpen && (
               <button
                 type="button"
@@ -216,7 +216,7 @@ export default function UserSidebar() {
         </div>
       </aside>
 
-      {/* Notification panel */}
+      {/* Notification panel for closing */}
       {showNotifications && isOpen && (
         <NotificationPanel
           onClose={() => setShowNotifications(false)}

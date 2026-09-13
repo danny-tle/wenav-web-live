@@ -12,6 +12,7 @@ import {
 
 import { MAP_DEFAULTS } from "@/lib/constants";
 
+
 type RiskArea = {
   id: string;
   address: string;
@@ -28,8 +29,6 @@ interface MapWrapperProps {
   flyToLocation?: [number, number];
   flyToZoom?: number;
   zoomPosition?: "topleft" | "topright" | "bottomleft" | "bottomright";
-
-  // 추가된 부분
   riskAreas?: RiskArea[];
 }
 
@@ -60,8 +59,6 @@ export default function MapWrapper({
   flyToLocation,
   flyToZoom = 14,
   zoomPosition = "topleft",
-
-  // 추가된 부분
   riskAreas = [],
 }: MapWrapperProps) {
   const mapKey = useRef(`map-${Date.now()}`).current;
@@ -91,7 +88,7 @@ export default function MapWrapper({
           />
         )}
 
-        {/* 항상 표시되는 위험지역 */}
+        {/* Dangerous zone mapping */}
         {riskAreas.map((area) => (
           <CircleMarker
             key={area.id}

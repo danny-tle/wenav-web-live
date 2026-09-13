@@ -11,6 +11,13 @@ const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ),
 });
 
+type PairedUser = {
+  id: string;
+  name: string;
+};
+
+const users: PairedUser[] = [];
+
 export default function MyUsersPage() {
   const [showPairing, setShowPairing] = useState(false);
   const [pairingCode, setPairingCode] = useState(["", "", "", ""]);
@@ -31,42 +38,47 @@ export default function MyUsersPage() {
   return (
     <div className="h-full flex flex-col">
 
-      <div className="flex-1 flex gap-6 min-h-[400px]">
+      <div className="flex min-h-[400px] flex-1">
         {/* User list panel */}
-        <div className="w-72 flex-shrink-0 bg-white border border-gray-100 flex flex-col">
-          <div className="p-4 border-b border-gray-100">
+        <div className="flex w-72 flex-shrink-0 flex-col bg-white">
+          {/* Header */}
+          <div className="border-b border-gray-100 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">
-                All Users: 0
+                My Users: {users.length}
               </span>
+
+              <button
+                type="button"
+                onClick={() => setShowPairing(true)}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-wenav-purple transition-colors hover:bg-wenav-purple/10"
+              >
+                <Plus size={16} />
+                Add User
+              </button>
             </div>
           </div>
 
           {/* Empty state */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-wenav-gray flex items-center justify-center mb-3">
-              <Users size={20} className="text-gray-400" />
-            </div>
-            <p className="text-sm text-gray-500">No users paired yet</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Add a user to start monitoring their location.
-            </p>
-          </div>
+          {users.length === 0 && (
+            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-wenav-gray">
+                <Users size={20} className="text-gray-400" />
+              </div>
 
-          {/* Add user button */}
-          <div className="p-4 border-t border-gray-100">
-            <button
-              onClick={() => setShowPairing(true)}
-              className="flex items-center gap-2 text-sm font-medium text-wenav-purple hover:text-wenav-purple/80 transition-colors w-full"
-            >
-              <Plus size={18} />
-              Add User
-            </button>
-          </div>
+              <p className="text-sm text-gray-500">
+                No users paired yet
+              </p>
+
+              <p className="mt-1 text-xs text-gray-400">
+                Add a user to start monitoring their location.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Map panel */}
-        <div className="flex-1 rounded-wenav overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <MapWrapper scrollWheelZoom={true} />
         </div>
       </div>
@@ -75,10 +87,10 @@ export default function MyUsersPage() {
       {showPairing && (
         <>
           <div
-            className="fixed inset-0 bg-black/30 z-50"
+            className="fixed inset-0 bg-black/30 z-[2000]"
             onClick={() => setShowPairing(false)}
           />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-wenav p-8 w-full max-w-sm shadow-xl">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2010] bg-white rounded-wenav p-8 w-full max-w-sm shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-wenav-dark">
                 Enter pairing code
