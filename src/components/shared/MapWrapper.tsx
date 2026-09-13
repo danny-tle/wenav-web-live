@@ -7,11 +7,12 @@ import {
   ZoomControl,
   CircleMarker,
   Popup,
+  Polyline,
   useMap,
 } from "react-leaflet";
 
 import { MAP_DEFAULTS } from "@/lib/constants";
-import type { HighRiskArea } from "@/lib/types";
+import type { Coordinate, HighRiskArea, TrackedUser, } from "@/lib/types";
 
 interface MapWrapperProps {
   children?: ReactNode;
@@ -23,6 +24,9 @@ interface MapWrapperProps {
   flyToZoom?: number;
   zoomPosition?: "topleft" | "topright" | "bottomleft" | "bottomright";
   riskAreas?: HighRiskArea[];
+  selectedLocation?: Coordinate;
+  route?: Coordinate[];
+  historyPoints?: NonNullable<TrackedUser["history"]>;
 }
 
 function MapFlyTo({
@@ -53,8 +57,15 @@ export default function MapWrapper({
   flyToZoom = 14,
   zoomPosition = "topleft",
   riskAreas = [],
+  selectedLocation,
+  route = [],
+  historyPoints = [],
 }: MapWrapperProps) {
   // const mapKey = useRef(`map-${Date.now()}`).current;
+
+  const routePositions: [number, number][] = route.map(
+  (location) => [location.lat, location.lng]
+  );
 
   return (
     <div className={className}>
@@ -81,11 +92,59 @@ export default function MapWrapper({
           />
         )}
 
-        {/* Dangerous zone mapping */}
         {riskAreas.map((area) => (
           <CircleMarker
             key={area.id}
             center={[area.lat, area.lng]}
+            radius={10}
+          >
+            <Popup>{area.label}</Popup>
+          </CircleMarker>
+        ))}
+
+        {/* Draw the selected user's route when
+            at least two locations are available = Selected user's route */}
+        {routePositions.length > 1 && (
+        <Polyline
+          positions={routePositions}
+          pathOptions={{
+            color: "#111827",
+            weight: 4,
+            opacity: 0.85,
+            lineCap: "round",
+            lineJoin: "round",
+          }}
+        />
+        )}
+
+        {/* History location points */}
+        {historyPoints.map((activity) => (
+          <CircleMarker
+            key={activity.id}
+            center={[
+              activity.location.lat,
+              activity.location.lng,
+            ]}
+            radius={6}
+            pathOptions={{
+              color: "#7c3aed",
+              fillColor: "#a78bfa",
+              fillOpacity: 0.85,
+              weight: 2,
+            }}
+          >
+            <Popup>{activity.title}</Popup>
+          </CircleMarker>
+        ))}
+
+
+        {/* Dangerous zone mapping */}
+        {selectedLocation && (
+          <CircleMarker
+            center={[
+              selectedLocation.lat,
+              selectedLocation.lng,
+            ]}
             radius={10}
             pathOptions={{
               color: "#ef4444",
@@ -94,12 +153,9 @@ export default function MapWrapper({
               weight: 2,
             }}
           >
-            <Popup>
-              <p className="font-medium">Risk Area</p>
-              <p>{area.label}</p>
-            </Popup>
+            <Popup> Current user location</Popup>
           </CircleMarker>
-        ))}
+        )}
 
         {children}
       </MapContainer>

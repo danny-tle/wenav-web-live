@@ -13,7 +13,7 @@ export default function DashboardLayout({
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen">
-        <DashboardTopbar />
+        {/* <DashboardTopbar /> */}
         <div className="flex flex-1 overflow-hidden bg-wenav-gray">
           <UserSidebar />
           <main className="flex-1 overflow-auto">{children}</main>

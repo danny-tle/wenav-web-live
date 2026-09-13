@@ -41,6 +41,22 @@ export interface TrackedUser {
   vestBattery: number;
   vestConnected: boolean;
 
+  // my-users profile information
+  homeAddress?: string;
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  history?: {
+    id: string;
+    title: string;
+    time: string;
+    recordedAt: string;
+    duration?: string;
+    location: Coordinate;
+  }[];
+
 }
 
 export interface Notification {
