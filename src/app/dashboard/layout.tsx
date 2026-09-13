@@ -4,6 +4,7 @@ import { AuthGuard } from "@/lib/auth";
 import UserSidebar from "@/components/user/UserSidebar";
 import DashboardTopbar from "@/components/shared/DashboardTopbar";
 
+
 export default function DashboardLayout({
   children,
 }: {
@@ -15,7 +16,7 @@ export default function DashboardLayout({
         <DashboardTopbar />
         <div className="flex flex-1 overflow-hidden bg-wenav-gray">
           <UserSidebar />
-          <main className="flex-1 overflow-auto p-6 lg:p-8">{children}</main>
+          <main className="flex-1 overflow-auto">{children}</main>
         </div>
       </div>
     </AuthGuard>

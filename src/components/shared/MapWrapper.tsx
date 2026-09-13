@@ -1,9 +1,23 @@
 "use client";
 
 import { ReactNode, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import {
+  MapContainer,
+  TileLayer,
+  ZoomControl,
+  CircleMarker,
+  Popup,
+  useMap,
+} from "react-leaflet";
+
 import { MAP_DEFAULTS } from "@/lib/constants";
+
+type RiskArea = {
+  id: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+};
 
 interface MapWrapperProps {
   children?: ReactNode;
@@ -14,13 +28,26 @@ interface MapWrapperProps {
   flyToLocation?: [number, number];
   flyToZoom?: number;
   zoomPosition?: "topleft" | "topright" | "bottomleft" | "bottomright";
+
+  // 추가된 부분
+  riskAreas?: RiskArea[];
 }
 
-function MapFlyTo({ location, zoom }: { location: [number, number]; zoom: number }) {
+function MapFlyTo({
+  location,
+  zoom,
+}: {
+  location: [number, number];
+  zoom: number;
+}) {
   const map = useMap();
+
   useEffect(() => {
-    map.flyTo(location, zoom, { duration: 1.5 });
+    map.flyTo(location, zoom, {
+      duration: 1.5,
+    });
   }, [location, zoom, map]);
+
   return null;
 }
 
@@ -33,8 +60,12 @@ export default function MapWrapper({
   flyToLocation,
   flyToZoom = 14,
   zoomPosition = "topleft",
+
+  // 추가된 부분
+  riskAreas = [],
 }: MapWrapperProps) {
   const mapKey = useRef(`map-${Date.now()}`).current;
+
   return (
     <div className={className}>
       <MapContainer
@@ -50,8 +81,36 @@ export default function MapWrapper({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
+
         <ZoomControl position={zoomPosition} />
-        {flyToLocation && <MapFlyTo location={flyToLocation} zoom={flyToZoom} />}
+
+        {flyToLocation && (
+          <MapFlyTo
+            location={flyToLocation}
+            zoom={flyToZoom}
+          />
+        )}
+
+        {/* 항상 표시되는 위험지역 */}
+        {riskAreas.map((area) => (
+          <CircleMarker
+            key={area.id}
+            center={[area.latitude, area.longitude]}
+            radius={10}
+            pathOptions={{
+              color: "#ef4444",
+              fillColor: "#ef4444",
+              fillOpacity: 0.35,
+              weight: 2,
+            }}
+          >
+            <Popup>
+              <p className="font-medium">Risk Area</p>
+              <p>{area.address}</p>
+            </Popup>
+          </CircleMarker>
+        ))}
+
         {children}
       </MapContainer>
     </div>

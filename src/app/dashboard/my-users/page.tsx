@@ -30,16 +30,10 @@ export default function MyUsersPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-wenav-dark">My Users</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage and monitor your paired users.
-        </p>
-      </div>
 
       <div className="flex-1 flex gap-6 min-h-[400px]">
         {/* User list panel */}
-        <div className="w-72 flex-shrink-0 bg-white rounded-wenav border border-gray-100 flex flex-col">
+        <div className="w-72 flex-shrink-0 bg-white border border-gray-100 flex flex-col">
           <div className="p-4 border-b border-gray-100">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">
