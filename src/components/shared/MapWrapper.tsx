@@ -1,9 +1,12 @@
 "use client";
 
 import { ReactNode, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import { Map as MapGL, NavigationControl, MapRef } from "react-map-gl/maplibre";
+import type { ControlPosition } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
+import { MAP_STYLE, TILTED_PITCH } from "@/lib/mapStyle";
+import { useMapCamera } from "@/lib/useMapCamera";
 
 interface MapWrapperProps {
   children?: ReactNode;
@@ -12,16 +15,7 @@ interface MapWrapperProps {
   zoom?: number;
   scrollWheelZoom?: boolean;
   flyToLocation?: [number, number];
-  flyToZoom?: number;
-  zoomPosition?: "topleft" | "topright" | "bottomleft" | "bottomright";
-}
-
-function MapFlyTo({ location, zoom }: { location: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo(location, zoom, { duration: 1.5 });
-  }, [location, zoom, map]);
-  return null;
+  zoomPosition?: ControlPosition;
 }
 
 export default function MapWrapper({
@@ -31,29 +25,39 @@ export default function MapWrapper({
   zoom = MAP_DEFAULTS.zoom,
   scrollWheelZoom = true,
   flyToLocation,
-  flyToZoom = 14,
-  zoomPosition = "topleft",
+  zoomPosition = "top-left",
 }: MapWrapperProps) {
-  const mapKey = useRef(`map-${Date.now()}`).current;
+  const mapRef = useRef<MapRef>(null);
+  const { flyToLocation: flyTo, syncPitchToZoom } = useMapCamera(mapRef);
+
+  // Fly in whenever the caller passes a new location (e.g. a geocoded search
+  // result). The camera arcs in and settles tilted; useMapCamera keeps the
+  // move flat and instant for reduced-motion users.
+  useEffect(() => {
+    if (!flyToLocation) return;
+    flyTo(flyToLocation[0], flyToLocation[1]);
+  }, [flyToLocation, flyTo]);
+
   return (
     <div className={className}>
-      <MapContainer
-        key={mapKey}
-        center={center}
-        zoom={zoom}
-        scrollWheelZoom={scrollWheelZoom}
-        zoomControl={false}
-        className="h-full w-full rounded-wenav"
-        attributionControl={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        />
-        <ZoomControl position={zoomPosition} />
-        {flyToLocation && <MapFlyTo location={flyToLocation} zoom={flyToZoom} />}
-        {children}
-      </MapContainer>
+      <div className="w-full h-full rounded-wenav overflow-hidden">
+        <MapGL
+          ref={mapRef}
+          initialViewState={{
+            latitude: center[0],
+            longitude: center[1],
+            zoom,
+          }}
+          mapStyle={MAP_STYLE}
+          style={{ width: "100%", height: "100%" }}
+          scrollZoom={scrollWheelZoom}
+          maxPitch={TILTED_PITCH}
+          onZoomEnd={syncPitchToZoom}
+        >
+          <NavigationControl position={zoomPosition} showCompass visualizePitch />
+          {children}
+        </MapGL>
+      </div>
     </div>
   );
 }

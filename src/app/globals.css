@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import "leaflet/dist/leaflet.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
   --background: #ffffff;
@@ -14,8 +14,8 @@ body {
   background: var(--background);
 }
 
-/* Leaflet container sizing */
-.leaflet-container {
+/* MapLibre container sizing */
+.maplibregl-map {
   width: 100%;
   height: 100%;
 }
