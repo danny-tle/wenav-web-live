@@ -2,7 +2,6 @@
 
 import { AuthGuard } from "@/lib/auth";
 import UserSidebar from "@/components/user/UserSidebar";
-import DashboardTopbar from "@/components/shared/DashboardTopbar";
 
 
 export default function DashboardLayout({
