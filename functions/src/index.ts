@@ -6,6 +6,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { createTransport } from "nodemailer";
 import { randomInt } from "crypto";
+import { syncPublicIncidentDoc } from "./publicIncidents.js";
 
 initializeApp();
 setGlobalOptions({ maxInstances: 10 });
@@ -118,24 +119,11 @@ export const verifyEmailCode = onCall(async (request) => {
 export const syncPublicIncident = onDocumentWritten(
   "incidents/{incidentId}",
   async (event) => {
-    const publicRef = db
-      .collection("publicIncidents")
-      .doc(event.params.incidentId);
     const incident = event.data?.after;
-    const data = incident?.data();
-
-    if (!incident?.exists || !data || data.status !== "approved") {
-      await publicRef.delete();
-      return;
-    }
-
-    await publicRef.set({
-      type: data.type,
-      location: data.location,
-      address: data.address ?? "",
-      reportedAt: data.reportedAt ?? FieldValue.serverTimestamp(),
-      lastUpdated: data.lastUpdated ?? FieldValue.serverTimestamp(),
-      publishedAt: FieldValue.serverTimestamp(),
-    });
+    await syncPublicIncidentDoc(
+      db,
+      event.params.incidentId,
+      incident?.exists ? incident.data() : undefined,
+    );
   },
 );

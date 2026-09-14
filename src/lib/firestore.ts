@@ -116,11 +116,19 @@ export function subscribeToPublicIncidents(
     collection(db, "publicIncidents"),
     orderBy("reportedAt", "desc"),
   );
-  return onSnapshot(q, (snap) => {
-    callback(
-      snap.docs.map((d) => docToPublicIncident(d.id, d.data())),
-    );
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      callback(
+        snap.docs.map((d) => docToPublicIncident(d.id, d.data())),
+      );
+    },
+    // Without this, a denied or failed listener leaves the map silently empty.
+    (error) => {
+      console.error("Failed to load public incidents:", error);
+      callback([]);
+    },
+  );
 }
 
 export async function updateIncidentStatus(
