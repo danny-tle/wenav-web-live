@@ -61,21 +61,26 @@ export function useMapCamera(mapRef: RefObject<MapRef | null>) {
     }
   }, [mapRef, beginAnimation]);
 
-  /** Cinematic fly-in to a searched location, ending in the tilted 3D view. */
+  /**
+   * Cinematic fly-in to a searched location, ending in the tilted 3D view.
+   *
+   * `zoom` overrides the default settle zoom — dashboard maps ask for a wider
+   * 16 so the surrounding block stays in frame.
+   */
   const flyToLocation = useCallback(
-    (lat: number, lng: number) => {
+    (lat: number, lng: number, zoom: number = FLY_IN_ZOOM) => {
       const map = mapRef.current;
       if (!map) return;
 
       if (prefersReducedMotion()) {
-        map.jumpTo({ center: [lng, lat], zoom: FLY_IN_ZOOM, pitch: 0, bearing: 0 });
+        map.jumpTo({ center: [lng, lat], zoom, pitch: 0, bearing: 0 });
         return;
       }
 
       beginAnimation(map);
       map.flyTo({
         center: [lng, lat],
-        zoom: FLY_IN_ZOOM,
+        zoom,
         pitch: TILTED_PITCH,
         bearing: FLY_IN_BEARING,
         duration: 3000,

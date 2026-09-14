@@ -10,25 +10,26 @@ export default function NotificationPanel({ onClose }: NotificationPanelProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/20" onClick={onClose} />
+      {/* <div className="fixed inset-0 z-50 bg-black/20" onClick={onClose} /> */}
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-80 bg-white shadow-xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex h-full w-80 flex-shrink-0 flex-col border-r border-gray-100 bg-white">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h2 className="font-semibold text-wenav-dark">Notifications</h2>
+
           <button
+            type="button" 
             onClick={onClose}
-            className="p-1 hover:bg-wenav-gray rounded-lg transition-colors"
+            className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-wenav-gray hover:text-gray-600"
             aria-label="Close notifications"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-wenav-gray flex items-center justify-center mb-4">
-            <Bell size={20} className="text-gray-400" />
-          </div>
+        {/* Empty state */}
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 text-center">
+          <Bell size={20} className="mb-3 text-gray-400" />
           <p className="text-sm text-gray-500">No notifications yet</p>
           <p className="text-xs text-gray-400 mt-1">
             Notifications from your users will appear here.
