@@ -235,6 +235,24 @@ describe("subscribeToPublicIncidents", () => {
     expect(incident).not.toHaveProperty("reportedBy");
     expect(incident).not.toHaveProperty("verificationNote");
   });
+
+  it("logs listener errors and falls back to an empty list", () => {
+    const callback = jest.fn();
+    const error = new Error("permission-denied");
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockOnSnapshot.mockImplementation(
+      (_q: unknown, _cb: unknown, onError: (err: Error) => void) => {
+        onError(error);
+        return jest.fn();
+      },
+    );
+
+    subscribeToPublicIncidents(callback);
+
+    expect(consoleError).toHaveBeenCalledWith("Failed to load public incidents:", error);
+    expect(callback).toHaveBeenCalledWith([]);
+    consoleError.mockRestore();
+  });
 });
 
 // ─── updateIncidentStatus ─────────────────────────────────────────────────────
