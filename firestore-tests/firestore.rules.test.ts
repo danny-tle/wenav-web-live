@@ -8,6 +8,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -19,6 +20,29 @@ import {
 } from "firebase/firestore";
 
 const projectId = "wenav-rules-test";
+
+const validLink = (
+  userId: string,
+  caregiverId: string,
+  scopes: Record<string, boolean> = {
+    liveLocation: true,
+    incidents: true,
+    history: false,
+  },
+) => ({
+  userId,
+  caregiverId,
+  userName: "Cared For",
+  caregiverName: "Care Giver",
+  scopes,
+  createdAt: serverTimestamp(),
+});
+
+const validLiveLocation = () => ({
+  location: { lat: 40.7608, lng: -111.891 },
+  status: "walking",
+  updatedAt: serverTimestamp(),
+});
 
 const validIncident = (reportedBy: string) => ({
   type: "blocked_path",
@@ -403,5 +427,164 @@ describe("WeNav Firestore security rules", () => {
         location: { lat: 40.7608, lng: -111.891 },
       }),
     );
+  });
+
+  // ─── Caregiver links ───────────────────────────────────────────────────────
+
+  test("clients cannot forge a caregiver link", async () => {
+    const caregiverDb = testEnv.authenticatedContext("caregiver-1").firestore();
+
+    await assertFails(
+      setDoc(
+        doc(caregiverDb, "links/user-1_caregiver-1"),
+        validLink("user-1", "caregiver-1"),
+      ),
+    );
+  });
+
+  test("both parties can read their own link, outsiders cannot", async () => {
+    await seed("links/user-1_caregiver-1", validLink("user-1", "caregiver-1"));
+
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+    const caregiverDb = testEnv.authenticatedContext("caregiver-1").firestore();
+    const strangerDb = testEnv.authenticatedContext("user-2").firestore();
+
+    await assertSucceeds(getDoc(doc(userDb, "links/user-1_caregiver-1")));
+    await assertSucceeds(getDoc(doc(caregiverDb, "links/user-1_caregiver-1")));
+    await assertFails(getDoc(doc(strangerDb, "links/user-1_caregiver-1")));
+  });
+
+  test("the cared-for user can narrow scopes; the caregiver cannot widen them", async () => {
+    await seed(
+      "links/user-1_caregiver-1",
+      validLink("user-1", "caregiver-1", {
+        liveLocation: true,
+        incidents: true,
+        history: false,
+      }),
+    );
+
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+    const caregiverDb = testEnv.authenticatedContext("caregiver-1").firestore();
+
+    await assertSucceeds(
+      updateDoc(doc(userDb, "links/user-1_caregiver-1"), {
+        scopes: { liveLocation: false, incidents: true, history: false },
+      }),
+    );
+
+    await assertFails(
+      updateDoc(doc(caregiverDb, "links/user-1_caregiver-1"), {
+        scopes: { liveLocation: true, incidents: true, history: true },
+      }),
+    );
+  });
+
+  test("either party can revoke the link", async () => {
+    await seed("links/user-1_caregiver-1", validLink("user-1", "caregiver-1"));
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+    await assertSucceeds(deleteDoc(doc(userDb, "links/user-1_caregiver-1")));
+
+    await seed("links/user-2_caregiver-2", validLink("user-2", "caregiver-2"));
+    const caregiverDb = testEnv.authenticatedContext("caregiver-2").firestore();
+    await assertSucceeds(
+      deleteDoc(doc(caregiverDb, "links/user-2_caregiver-2")),
+    );
+  });
+
+  // ─── Live location ─────────────────────────────────────────────────────────
+
+  test("a user can publish their own live location", async () => {
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+    await assertSucceeds(
+      setDoc(doc(userDb, "liveLocations/user-1"), validLiveLocation()),
+    );
+  });
+
+  test("a user cannot publish someone else's live location", async () => {
+    const userDb = testEnv.authenticatedContext("user-2").firestore();
+
+    await assertFails(
+      setDoc(doc(userDb, "liveLocations/user-1"), validLiveLocation()),
+    );
+  });
+
+  test("a linked caregiver can read live location when the scope is granted", async () => {
+    await seed("links/user-1_caregiver-1", validLink("user-1", "caregiver-1"));
+    await seed("liveLocations/user-1", {
+      location: { lat: 40.7608, lng: -111.891 },
+      status: "walking",
+      updatedAt: new Date(),
+    });
+
+    const caregiverDb = testEnv.authenticatedContext("caregiver-1").firestore();
+
+    await assertSucceeds(getDoc(doc(caregiverDb, "liveLocations/user-1")));
+  });
+
+  test("a caregiver cannot read live location once the scope is turned off", async () => {
+    await seed(
+      "links/user-1_caregiver-1",
+      validLink("user-1", "caregiver-1", {
+        liveLocation: false,
+        incidents: true,
+        history: false,
+      }),
+    );
+    await seed("liveLocations/user-1", {
+      location: { lat: 40.7608, lng: -111.891 },
+      status: "walking",
+      updatedAt: new Date(),
+    });
+
+    const caregiverDb = testEnv.authenticatedContext("caregiver-1").firestore();
+
+    await assertFails(getDoc(doc(caregiverDb, "liveLocations/user-1")));
+  });
+
+  test("an unlinked user cannot read someone's live location", async () => {
+    await seed("liveLocations/user-1", {
+      location: { lat: 40.7608, lng: -111.891 },
+      status: "walking",
+      updatedAt: new Date(),
+    });
+
+    const strangerDb = testEnv.authenticatedContext("user-2").firestore();
+
+    await assertFails(getDoc(doc(strangerDb, "liveLocations/user-1")));
+  });
+
+  test("revoking the link immediately cuts off live location", async () => {
+    await seed("links/user-1_caregiver-1", validLink("user-1", "caregiver-1"));
+    await seed("liveLocations/user-1", {
+      location: { lat: 40.7608, lng: -111.891 },
+      status: "walking",
+      updatedAt: new Date(),
+    });
+
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+    const caregiverDb = testEnv.authenticatedContext("caregiver-1").firestore();
+
+    await assertSucceeds(getDoc(doc(caregiverDb, "liveLocations/user-1")));
+    await assertSucceeds(deleteDoc(doc(userDb, "links/user-1_caregiver-1")));
+    await assertFails(getDoc(doc(caregiverDb, "liveLocations/user-1")));
+  });
+
+  // ─── Pairing codes ─────────────────────────────────────────────────────────
+
+  test("pairing codes are invisible to every client", async () => {
+    await seed("pairingCodes/ABC234", {
+      userId: "user-1",
+      expiresAt: new Date(Date.now() + 600000),
+    });
+
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+    const adminDb = testEnv
+      .authenticatedContext("admin-1", { admin: true })
+      .firestore();
+
+    await assertFails(getDoc(doc(userDb, "pairingCodes/ABC234")));
+    await assertFails(getDoc(doc(adminDb, "pairingCodes/ABC234")));
   });
 });

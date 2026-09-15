@@ -185,5 +185,129 @@ service cloud.firestore {
       allow read, write: if isSignedIn()
         && (request.auth.uid == userId || isAdmin());
     }
+
+    // ─── Caregiver links ─────────────────────────────────────────────────────
+    //
+    // "Caregiver" is a property of a relationship, not of an account. A link
+    // document at links/{userId}_{caregiverId} grants one specific caregiver
+    // scoped access to one specific user. The deterministic ID lets these
+    // rules resolve a relationship with a single exists()/get() rather than a
+    // query. Links are created only by the redeemPairingCode Cloud Function.
+
+    function linkId(userId) {
+      return userId + '_' + request.auth.uid;
+    }
+
+    function isLinkedCaregiverOf(userId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/links/$(linkId(userId)));
+    }
+
+    function linkGrants(userId, scope) {
+      return isLinkedCaregiverOf(userId)
+        && get(/databases/$(database)/documents/links/$(linkId(userId)))
+             .data.scopes[scope] == true;
+    }
+
+    function hasValidScopes(scopes) {
+      return scopes is map
+        && scopes.keys().hasOnly(['liveLocation', 'incidents', 'history'])
+        && scopes.keys().hasAll(['liveLocation', 'incidents', 'history'])
+        && scopes.liveLocation is bool
+        && scopes.incidents is bool
+        && scopes.history is bool;
+    }
+
+    match /links/{link} {
+      // Either party can see the link; nobody else can enumerate relationships.
+      allow get, list: if isSignedIn()
+        && (resource.data.userId == request.auth.uid
+          || resource.data.caregiverId == request.auth.uid
+          || isAdmin());
+
+      // Created server-side only, after a pairing code is redeemed.
+      allow create: if false;
+
+      // Only the person being cared for changes what is shared. The caregiver
+      // can never widen their own access.
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['scopes'])
+        && hasValidScopes(request.resource.data.scopes);
+
+      // Either party can end the relationship, and it takes effect instantly.
+      allow delete: if isSignedIn()
+        && (resource.data.userId == request.auth.uid
+          || resource.data.caregiverId == request.auth.uid
+          || isAdmin());
+    }
+
+    // ─── Live location ───────────────────────────────────────────────────────
+    //
+    // One overwritten document per user, kept out of users/{uid} because it is
+    // written every few seconds during a walk and users/ is listed by admins.
+
+    function hasValidLiveLocationShape(data) {
+      return data.keys().hasAll(['location', 'status', 'updatedAt'])
+        && data.keys().hasOnly([
+          'location',
+          'status',
+          'updatedAt',
+          'vestBattery',
+          'vestConnected'
+        ])
+        && isValidLocation(data.location)
+        && data.status in ['walking', 'idle', 'offline']
+        && data.updatedAt is timestamp
+        && (!('vestBattery' in data)
+          || (data.vestBattery is number
+            && data.vestBattery >= 0
+            && data.vestBattery <= 100))
+        && (!('vestConnected' in data) || data.vestConnected is bool);
+    }
+
+    match /liveLocations/{userId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == userId
+          || isAdmin()
+          || linkGrants(userId, 'liveLocation'));
+
+      allow create, update: if isSignedIn()
+        && request.auth.uid == userId
+        && hasValidLiveLocationShape(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Breadcrumb trail for the route line on the caregiver dashboard.
+    match /liveLocations/{userId}/track/{pointId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == userId
+          || isAdmin()
+          || linkGrants(userId, 'liveLocation'));
+
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidLocation(request.resource.data.location)
+        && request.resource.data.recordedAt == request.time;
+
+      allow update: if false;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ─── Pairing codes ───────────────────────────────────────────────────────
+    // Minted and redeemed exclusively by Cloud Functions (Admin SDK bypasses
+    // these rules). No client may read a code — reading one would be enough to
+    // pair yourself to a stranger.
+
+    match /pairingCodes/{code} {
+      allow read, write: if false;
+    }
+
+    match /pairingAttempts/{uid} {
+      allow read, write: if false;
+    }
   }
 }

@@ -139,3 +139,187 @@ export const syncPublicIncident = onDocumentWritten(
     });
   },
 );
+
+// ─── Caregiver pairing ───────────────────────────────────────────────────────
+//
+// A caregiver relationship is a document, not an account role. The same person
+// can wear a vest and also watch over someone else, so "caregiver" is a
+// property of the link rather than of the user. See `links` in firestore.rules.
+//
+// Direction is deliberate: the user being cared for mints the code, and the
+// caregiver redeems it. The person whose location is shared is the one issuing
+// the invitation — that is the consent step described in the design document.
+
+/** Minutes a pairing code stays valid after it is minted. */
+const PAIRING_CODE_TTL_MINUTES = 10;
+
+/**
+ * Unambiguous alphabet — no O/0, I/1/L. Codes get read aloud over the phone by
+ * users who cannot see the screen, so characters that sound or look alike are
+ * excluded. 32^6 ≈ 1.07 billion combinations.
+ */
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const CODE_LENGTH = 6;
+
+/** Redemption attempts allowed per caregiver per window, to blunt guessing. */
+const MAX_REDEEM_ATTEMPTS = 10;
+const REDEEM_WINDOW_MINUTES = 10;
+
+function generateCode(): string {
+  let code = "";
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    code += CODE_ALPHABET[randomInt(0, CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+/** Best-effort display name: profile first, then auth, then email local part. */
+async function resolveDisplayName(uid: string): Promise<string> {
+  const profile = await db.collection("users").doc(uid).get();
+  const fromProfile = profile.data()?.displayName as string | undefined;
+  if (fromProfile && fromProfile.trim().length > 0) return fromProfile;
+
+  const user = await getAuth().getUser(uid);
+  if (user.displayName && user.displayName.trim().length > 0) {
+    return user.displayName;
+  }
+  return user.email?.split("@")[0] ?? "WeNav user";
+}
+
+/**
+ * Mints a single-use pairing code for the signed-in user.
+ *
+ * Any code this user minted earlier is invalidated, so only the most recently
+ * displayed code works. Codes live in a collection no client can read or write
+ * (rules deny both); only this function and `redeemPairingCode` touch them.
+ */
+export const createPairingCode = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+  const uid = request.auth.uid;
+
+  // Only one live code per user: drop any earlier ones.
+  const existing = await db
+    .collection("pairingCodes")
+    .where("userId", "==", uid)
+    .get();
+  await Promise.all(existing.docs.map((d) => d.ref.delete()));
+
+  // Collisions are vanishingly unlikely but cheap to rule out.
+  let code = generateCode();
+  for (let i = 0; i < 5; i++) {
+    const clash = await db.collection("pairingCodes").doc(code).get();
+    if (!clash.exists) break;
+    code = generateCode();
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(
+    now.getTime() + PAIRING_CODE_TTL_MINUTES * 60 * 1000
+  );
+
+  await db.collection("pairingCodes").doc(code).set({
+    userId: uid,
+    createdAt: now,
+    expiresAt,
+  });
+
+  return { code, expiresAt: expiresAt.toISOString() };
+});
+
+/**
+ * Redeems a pairing code, creating the caregiver link.
+ *
+ * Idempotent: redeeming when a link already exists returns the existing one
+ * rather than erroring, so a double tap on a slow connection is harmless.
+ */
+export const redeemPairingCode = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+  const caregiverId = request.auth.uid;
+
+  const raw = (request.data as { code?: string }).code ?? "";
+  const code = raw.trim().toUpperCase().replace(/[\s-]/g, "");
+  if (code.length !== CODE_LENGTH) {
+    throw new HttpsError("invalid-argument", "Enter the 6-character code.");
+  }
+
+  // Per-caller throttle. Guessing a code that does not exist leaves no counter
+  // on the code document itself, so the limit has to live with the caller.
+  const throttleRef = db.collection("pairingAttempts").doc(caregiverId);
+  const now = new Date();
+  const windowStart = new Date(
+    now.getTime() - REDEEM_WINDOW_MINUTES * 60 * 1000
+  );
+  const throttle = await throttleRef.get();
+  const throttleData = throttle.data();
+  const windowOpenedAt = throttleData?.windowStartedAt?.toDate() as
+    | Date
+    | undefined;
+
+  if (windowOpenedAt && windowOpenedAt > windowStart) {
+    if ((throttleData?.attempts ?? 0) >= MAX_REDEEM_ATTEMPTS) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many attempts. Try again in a few minutes."
+      );
+    }
+    await throttleRef.update({ attempts: FieldValue.increment(1) });
+  } else {
+    await throttleRef.set({ windowStartedAt: now, attempts: 1 });
+  }
+
+  const codeRef = db.collection("pairingCodes").doc(code);
+  const codeDoc = await codeRef.get();
+  if (!codeDoc.exists) {
+    throw new HttpsError("not-found", "That code isn't valid. Ask for a new one.");
+  }
+
+  const codeData = codeDoc.data()!;
+  if (now > codeData.expiresAt.toDate()) {
+    await codeRef.delete();
+    throw new HttpsError("deadline-exceeded", "That code expired. Ask for a new one.");
+  }
+
+  const userId = codeData.userId as string;
+  if (userId === caregiverId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "You can't pair with your own account."
+    );
+  }
+
+  const linkId = `${userId}_${caregiverId}`;
+  const linkRef = db.collection("links").doc(linkId);
+  const existingLink = await linkRef.get();
+  if (existingLink.exists) {
+    await codeRef.delete();
+    return {
+      linkId,
+      userId,
+      userName: existingLink.data()?.userName ?? "WeNav user",
+      alreadyLinked: true,
+    };
+  }
+
+  const [userName, caregiverName] = await Promise.all([
+    resolveDisplayName(userId),
+    resolveDisplayName(caregiverId),
+  ]);
+
+  await linkRef.set({
+    userId,
+    caregiverId,
+    userName,
+    caregiverName,
+    scopes: { liveLocation: true, incidents: true, history: false },
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Single use.
+  await codeRef.delete();
+
+  return { linkId, userId, userName, alreadyLinked: false };
+});

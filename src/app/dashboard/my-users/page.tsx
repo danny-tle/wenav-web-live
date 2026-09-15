@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Users, Plus, X } from "lucide-react";
 import type { Coordinate, TrackedUser, } from "@/lib/types";
 import UserDetailsPanel from "@/components/dashboard/UserDetailsPanel";
+import PairingCodeInput from "@/components/shared/PairingCodeInput";
+import {
+  redeemPairingCode,
+  subscribeToTrackedUsers,
+  subscribeToUserTrack,
+} from "@/lib/firestore";
+import { useAuth } from "@/lib/auth";
+import { PAIRING_CODE_LENGTH, pairingMessageFor } from "@/lib/pairing";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
@@ -13,148 +21,68 @@ const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ),
 });
 
-const initialUsers: TrackedUser[] = [
-  {
-    id: "user-1",
-    name: "Terra",
-    status: "walking",
-    avatar: undefined,
-    lastLocation: {
-      lat: 40.7707,
-      lng: -111.891,
-    },
-    lastUpdated: "12min ago",
-    route: [
-      { lat: 40.744, lng: -111.905 },
-      { lat: 40.751, lng: -111.898 },
-      { lat: 40.759, lng: -111.901 },
-      { lat: 40.7707, lng: -111.891 },
-    ],
-    vestBattery: 78,
-    vestConnected: true,
-    homeAddress: "123 Main St, Salt Lake City, UT",
-    emergencyContact: {
-      name: "John Doe",
-      phone: "555-123-4567",
-      email: "t.park@utah.edu",
-    },
-    history: [
-      {
-        id: "terra-activity-1",
-        title: "434 Main St",
-        recordedAt: "2026-09-13T09:00:00-06:00",
-        time: "7:00 AM",
-        location: {
-          lat: 40.744,
-          lng: -111.905,
-        },
-      },
-      {
-        id: "terra-activity-2",
-        title: "25 Main St",
-        recordedAt: "2026-09-13T10:00:00-06:00",
-        time: "10:00 AM",
-        location: {
-          lat: 40.751,
-          lng: -111.898,
-        },
-      },
-      {
-        id: "terra-activity-3",
-        title: "Near UT Hospital",
-        recordedAt: "2026-09-13T11:00:00-06:00",
-        time: "11:00 AM",
-        location: {
-          lat: 40.759,
-          lng: -111.901,
-        },
-      },
-      {
-        id: "terra-activity-4",
-        title: "Regional Medical Center",
-        recordedAt: "2026-09-13T12:00:00-06:00",
-        time: "12:00 PM",
-        location: {
-          lat: 40.7707,
-          lng: -111.891,
-        },
-      },
-    ],
-  },
-  
-  {
-    id: "user-2",
-    name: "Danny",
-    status: "idle",
-    avatar: undefined,
-    lastLocation: {
-      lat: 40.762,
-      lng: -111.884,
-    },
-    lastUpdated: "3hr ago",
-    route: [],
-    vestBattery: 64,
-    vestConnected: true,
-  },
-  {
-    id: "user-3",
-    name: "Ethan",
-    status: "offline",
-    avatar: undefined,
-    lastLocation: {
-      lat: 40.755,
-      lng: -111.895,
-    },
-    lastUpdated: "5min ago",
-    route: [],
-    vestBattery: 42,
-    vestConnected: false,
-  },
-  {
-    id: "user-4",
-    name: "Tommy",
-    status: "walking",
-    avatar: undefined,
-    lastLocation: {
-      lat: 40.748,
-      lng: -111.902,
-    },
-    lastUpdated: "2hr ago",
-    route: [],
-    vestBattery: 91,
-    vestConnected: true,
-  },
-  {
-    id: "user-5",
-    name: "Jewan",
-    status: "idle",
-    avatar: undefined,
-    lastLocation: {
-      lat: 40.765,
-      lng: -111.91,
-    },
-    lastUpdated: "15min ago",
-    route: [],
-    vestBattery: 83,
-    vestConnected: true,
-  },
-];
-
 export default function MyUsersPage() {
-  const [users, setUsers] =
-    useState<TrackedUser[]>(initialUsers);
+  const { user: caregiver } = useAuth();
 
+  const [liveUsers, setLiveUsers] = useState<TrackedUser[]>([]);
   const [selectedUserId, setSelectedUserId] =
-    useState<string | null>(initialUsers[0]?.id ?? null);
+    useState<string | null>(null);
+
+  /**
+   * Profile edits made in the details panel. Live fields (position, status,
+   * vest) always come from Firestore; these sit on top so an edit isn't wiped
+   * by the next position update. They are not persisted yet.
+   */
+  const [profileEdits, setProfileEdits] =
+    useState<Record<string, Partial<TrackedUser>>>({});
+
+  // Every person this caregiver is linked to, merged with their live position.
+  useEffect(() => {
+    if (!caregiver) return;
+    return subscribeToTrackedUsers(caregiver.uid, setLiveUsers);
+  }, [caregiver]);
+
+  const users = useMemo(
+    () =>
+      liveUsers.map((liveUser) => ({
+        ...liveUser,
+        ...(profileEdits[liveUser.id] ?? {}),
+      })),
+    [liveUsers, profileEdits]
+  );
+
+  // Select the first person once the list arrives, and drop the selection if
+  // that link is revoked.
+  useEffect(() => {
+    if (users.length === 0) {
+      setSelectedUserId(null);
+      return;
+    }
+    if (!users.some((u) => u.id === selectedUserId)) {
+      setSelectedUserId(users[0].id);
+    }
+  }, [users, selectedUserId]);
 
   const [focusedLocation, setFocusedLocation] =
     useState<Coordinate | null>(null);
 
   const [showPairing, setShowPairing] = useState(false);
-  const [pairingCode, setPairingCode] = useState(["", "", "", ""]);
+  const [pairingCode, setPairingCode] = useState("");
+  const [pairingError, setPairingError] = useState("");
+  const [pairingBusy, setPairingBusy] = useState(false);
+  const [pairedName, setPairedName] = useState("");
 
   const selectedUser =
     users.find((user) => user.id === selectedUserId) ?? null;
+
+  // Today's breadcrumbs for the selected person, for the route line.
+  const [selectedRoute, setSelectedRoute] = useState<Coordinate[]>([]);
+
+  useEffect(() => {
+    setSelectedRoute([]);
+    if (!selectedUserId) return;
+    return subscribeToUserTrack(selectedUserId, setSelectedRoute);
+  }, [selectedUserId]);
 
   const today = new Date();
 
@@ -175,7 +103,7 @@ export default function MyUsersPage() {
           new Date(second.recordedAt).getTime()
       ) ?? [];
   
-  const todayRoute = todayHistory.map((activity) => activity.location);
+  const todayRoute = selectedRoute;
 
 
   const updateSelectedUser = (
@@ -183,25 +111,33 @@ export default function MyUsersPage() {
   ) => {
     if (!selectedUserId) return;
 
-    setUsers((previousUsers) =>
-      previousUsers.map((user) =>
-        user.id === selectedUserId
-          ? { ...user, ...updates }
-          : user
-      )
-    );
+    setProfileEdits((previous) => ({
+      ...previous,
+      [selectedUserId]: { ...(previous[selectedUserId] ?? {}), ...updates },
+    }));
   };
 
-  const handleCodeInput = (index: number, value: string) => {
-    if (value.length > 1) return;
-    const newCode = [...pairingCode];
-    newCode[index] = value;
-    setPairingCode(newCode);
+  const closePairing = () => {
+    setShowPairing(false);
+    setPairingCode("");
+    setPairingError("");
+    setPairedName("");
+  };
 
-    // Auto-focus next input
-    if (value && index < 3) {
-      const next = document.getElementById(`code-${index + 1}`);
-      next?.focus();
+  /** Redeems the code the cared-for person read out of the mobile app. */
+  const submitPairingCode = async (code: string) => {
+    if (code.length !== PAIRING_CODE_LENGTH || pairingBusy) return;
+
+    setPairingBusy(true);
+    setPairingError("");
+    try {
+      const name = await redeemPairingCode(code);
+      setPairedName(name);
+      setPairingCode("");
+    } catch (err) {
+      setPairingError(pairingMessageFor(err));
+    } finally {
+      setPairingBusy(false);
     }
   };
 
@@ -291,7 +227,20 @@ export default function MyUsersPage() {
         <div className="min-w-0 flex-1 overflow-hidden">
           <MapWrapper
             scrollWheelZoom={true}
-            selectedLocation={selectedUser?.lastLocation}
+            selectedLocation={
+              selectedUser?.hasLocation === false
+                ? undefined
+                : selectedUser?.lastLocation
+            }
+            selectedLocationLabel={
+              selectedUser && selectedUser.status !== "offline"
+                ? "Current user location"
+                : `Last known location${
+                    selectedUser?.lastUpdated
+                      ? ` · ${selectedUser.lastUpdated}`
+                      : ""
+                  }`
+            }
             historyPoints={todayHistory}
             route={todayRoute}
             flyToLocation={
@@ -300,7 +249,7 @@ export default function MyUsersPage() {
                     focusedLocation.lat,
                     focusedLocation.lng,
                   ]
-                : selectedUser
+                : selectedUser && selectedUser.hasLocation !== false
                   ? [
                       selectedUser.lastLocation.lat,
                       selectedUser.lastLocation.lng,
@@ -325,7 +274,7 @@ export default function MyUsersPage() {
         <>
           <div
             className="fixed inset-0 bg-black/30 z-[2000]"
-            onClick={() => setShowPairing(false)}
+            onClick={closePairing}
           />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2010] bg-white rounded-wenav p-8 w-full max-w-sm shadow-xl">
             <div className="flex items-center justify-between mb-6">
@@ -333,35 +282,76 @@ export default function MyUsersPage() {
                 Enter pairing code
               </h2>
               <button
-                onClick={() => setShowPairing(false)}
+                onClick={closePairing}
                 className="p-1 hover:bg-wenav-gray rounded-lg"
                 aria-label="Close"
               >
                 <X size={18} />
               </button>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
-              Enter the code provided by your user to connect to their account.
-            </p>
+            {pairedName ? (
+              <>
+                <p className="text-sm text-gray-600 mb-8">
+                  You&apos;re now connected to{" "}
+                  <span className="font-semibold text-wenav-dark">
+                    {pairedName}
+                  </span>
+                  . Their location appears here while they&apos;re walking, for
+                  as long as they keep sharing it.
+                </p>
+                <button
+                  onClick={closePairing}
+                  className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors"
+                >
+                  Done
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-6">
+                  Enter the {PAIRING_CODE_LENGTH}-character code from the WeNav
+                  app on your user&apos;s phone. Codes expire ten minutes after
+                  they&apos;re generated.
+                </p>
 
-            <div className="flex gap-3 justify-center mb-8">
-              {pairingCode.map((digit, i) => (
-                <input
-                  key={i}
-                  id={`code-${i}`}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleCodeInput(i, e.target.value)}
-                  className="w-16 h-20 text-center text-2xl font-bold border-2 border-gray-200 rounded-wenav focus:border-wenav-purple focus:ring-2 focus:ring-wenav-purple/20 outline-none transition-colors"
-                />
-              ))}
-            </div>
+                <div className="mb-6">
+                  <PairingCodeInput
+                    value={pairingCode}
+                    onChange={(next) => {
+                      setPairingCode(next);
+                      setPairingError("");
+                    }}
+                    onComplete={submitPairingCode}
+                    length={PAIRING_CODE_LENGTH}
+                    disabled={pairingBusy}
+                    autoFocus
+                    aria-describedby={
+                      pairingError ? "pairing-error" : undefined
+                    }
+                  />
+                </div>
 
-            <button className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors">
-              Connect
-            </button>
+                {pairingError && (
+                  <p
+                    id="pairing-error"
+                    role="alert"
+                    className="text-sm text-red-600 mb-4 text-center"
+                  >
+                    {pairingError}
+                  </p>
+                )}
+
+                <button
+                  onClick={() => submitPairingCode(pairingCode)}
+                  disabled={
+                    pairingCode.length !== PAIRING_CODE_LENGTH || pairingBusy
+                  }
+                  className="w-full py-3.5 bg-wenav-dark text-white font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors disabled:opacity-40"
+                >
+                  {pairingBusy ? "Connecting…" : "Connect"}
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
