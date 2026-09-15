@@ -30,12 +30,56 @@ export interface PublicIncident {
   lastUpdated?: string;
 }
 
+/** What a caregiver may see about one specific person. */
+export interface LinkScopes {
+  liveLocation: boolean;
+  incidents: boolean;
+  history: boolean;
+}
+
+/**
+ * A caregiver relationship, stored at `links/{userId}_{caregiverId}`.
+ *
+ * "Caregiver" is a property of this document, not of an account — the same
+ * person can be a WeNav user and a caregiver for someone else. Created only
+ * by the `redeemPairingCode` Cloud Function; see firestore.rules.
+ */
+export interface CaregiverLink {
+  id: string;
+  /** The person being cared for — whose data is shared. */
+  userId: string;
+  /** The person watching. Their own location is never shared back. */
+  caregiverId: string;
+  userName: string;
+  caregiverName: string;
+  scopes: LinkScopes;
+  createdAt?: string;
+}
+
+/** One overwritten document per user at `liveLocations/{userId}`. */
+export interface LiveLocation {
+  userId: string;
+  location: Coordinate;
+  status: "walking" | "idle" | "offline";
+  /** Epoch millis, for staleness checks. */
+  updatedAtMs: number;
+  vestBattery?: number;
+  vestConnected?: boolean;
+}
+
 export interface TrackedUser {
   id: string;
   name: string;
   avatar?: string;
   status: "walking" | "idle" | "offline";
   lastLocation: Coordinate;
+  /**
+   * False when no position has ever been recorded for this person, so the map
+   * can skip the pin instead of dropping it at 0,0 in the Gulf of Guinea.
+   * Absent on mock data, which always has a position.
+   */
+  hasLocation?: boolean;
+  /** Human phrasing — "2 min ago", "never" — not a fixed clock time. */
   lastUpdated: string;
   route: Coordinate[];
   vestBattery: number;

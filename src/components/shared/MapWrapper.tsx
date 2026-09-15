@@ -20,6 +20,16 @@ import type { Coordinate, HighRiskArea, TrackedUser } from "@/lib/types";
 
 type HistoryPoint = NonNullable<TrackedUser["history"]>[number];
 
+/** A paired person to drop on the map. */
+export interface MapPerson {
+  id: string;
+  name: string;
+  location: Coordinate;
+  /** False once the position has gone stale — the pin greys and says so. */
+  live: boolean;
+  lastUpdated?: string;
+}
+
 interface MapWrapperProps {
   children?: ReactNode;
   className?: string;
@@ -32,8 +42,15 @@ interface MapWrapperProps {
   zoomPosition?: ControlPosition;
   /** Admin-flagged high-risk areas. */
   riskAreas?: HighRiskArea[];
+  /** Every paired person, each with their own pin. */
+  people?: MapPerson[];
   /** Currently focused user or incident location. */
   selectedLocation?: Coordinate;
+  /**
+   * Popup text for `selectedLocation`. Defaults to the live phrasing; pass the
+   * stale wording when the position is only the last one on record.
+   */
+  selectedLocationLabel?: string;
   /** Ordered path for the selected user's route. */
   route?: Coordinate[];
   /** Individual recorded stops along the route. */
@@ -47,6 +64,7 @@ interface MapWrapperProps {
  * siblings of markers, so the open one is tracked here instead.
  */
 type OpenPopup =
+  | { kind: "person"; id: string }
   | { kind: "risk"; id: string }
   | { kind: "history"; id: string }
   | { kind: "selected" }
@@ -62,7 +80,9 @@ export default function MapWrapper({
   flyToZoom,
   zoomPosition = "top-left",
   riskAreas = [],
+  people = [],
   selectedLocation,
+  selectedLocationLabel = "Current user location",
   route = [],
   historyPoints = [],
 }: MapWrapperProps) {
@@ -107,6 +127,11 @@ export default function MapWrapper({
   const openRiskArea =
     openPopup?.kind === "risk"
       ? riskAreas.find((area) => area.id === openPopup.id)
+      : undefined;
+
+  const openPerson =
+    openPopup?.kind === "person"
+      ? people.find((person) => person.id === openPopup.id)
       : undefined;
 
   const openHistoryPoint =
@@ -180,6 +205,29 @@ export default function MapWrapper({
             </Marker>
           ))}
 
+          {/* Paired people. A stale pin still shows — it is the last place
+              they were seen, which is more useful than no pin at all. */}
+          {people.map((person) => (
+            <Marker
+              key={person.id}
+              longitude={person.location.lng}
+              latitude={person.location.lat}
+              anchor="center"
+              onClick={(event) => {
+                event.originalEvent.stopPropagation();
+                setOpenPopup({ kind: "person", id: person.id });
+              }}
+            >
+              <span
+                className={`block h-5 w-5 cursor-pointer rounded-full border-2 ${
+                  person.live
+                    ? "border-[#5C00F2] bg-[#5C00F2]/35"
+                    : "border-gray-400 bg-gray-400/30"
+                }`}
+              />
+            </Marker>
+          ))}
+
           {/* Current location of the selected user / incident */}
           {selectedLocation && (
             <Marker
@@ -193,6 +241,24 @@ export default function MapWrapper({
             >
               <span className="block h-5 w-5 cursor-pointer rounded-full border-2 border-[#ef4444] bg-[#ef4444]/35" />
             </Marker>
+          )}
+
+          {openPerson && (
+            <Popup
+              longitude={openPerson.location.lng}
+              latitude={openPerson.location.lat}
+              anchor="bottom"
+              closeOnClick={false}
+              onClose={() => setOpenPopup(null)}
+            >
+              <span className="font-semibold">{openPerson.name}</span>
+              <br />
+              {openPerson.live
+                ? "Walking now"
+                : `Last known location${
+                    openPerson.lastUpdated ? ` · ${openPerson.lastUpdated}` : ""
+                  }`}
+            </Popup>
           )}
 
           {openRiskArea && (
@@ -227,7 +293,7 @@ export default function MapWrapper({
               closeOnClick={false}
               onClose={() => setOpenPopup(null)}
             >
-              Current user location
+              {selectedLocationLabel}
             </Popup>
           )}
 
