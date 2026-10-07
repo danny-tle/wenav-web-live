@@ -75,8 +75,8 @@ export default function MyUsersPage() {
   const selectedUser =
     users.find((user) => user.id === selectedUserId) ?? null;
 
-  // Today's breadcrumbs for the selected person, for the route line.
-  const [selectedRoute, setSelectedRoute] = useState<Coordinate[]>([]);
+  // The selected person's most recent walk, for the route line.
+  const [selectedRoute, setSelectedRoute] = useState<Coordinate[][]>([]);
 
   useEffect(() => {
     setSelectedRoute([]);
@@ -102,8 +102,7 @@ export default function MyUsersPage() {
           new Date(first.recordedAt).getTime() -
           new Date(second.recordedAt).getTime()
       ) ?? [];
-  
-  const todayRoute = selectedRoute;
+
 
 
   const updateSelectedUser = (
@@ -242,7 +241,7 @@ export default function MyUsersPage() {
                   }`
             }
             historyPoints={todayHistory}
-            route={todayRoute}
+            route={selectedRoute}
             flyToLocation={
               focusedLocation
                 ? [

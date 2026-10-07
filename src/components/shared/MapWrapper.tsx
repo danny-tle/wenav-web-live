@@ -11,7 +11,7 @@ import {
   MapRef,
 } from "react-map-gl/maplibre";
 import type { ControlPosition } from "maplibre-gl";
-import type { FeatureCollection, LineString } from "geojson";
+import type { FeatureCollection, MultiLineString } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
 import { MAP_STYLE, TILTED_PITCH } from "@/lib/mapStyle";
@@ -51,8 +51,11 @@ interface MapWrapperProps {
    * stale wording when the position is only the last one on record.
    */
   selectedLocationLabel?: string;
-  /** Ordered path for the selected user's route. */
-  route?: Coordinate[];
+  /**
+   * The selected user's route, as separate pieces. Each piece is drawn as its
+   * own line; nothing is drawn between pieces, so a GPS gap shows as a gap.
+   */
+  route?: Coordinate[][];
   /** Individual recorded stops along the route. */
   historyPoints?: HistoryPoint[];
 }
@@ -103,25 +106,33 @@ export default function MapWrapper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flyKey, flyTo]);
 
+  // Only pieces with two or more points can be drawn as a line.
+  const drawableRoute = useMemo(
+    () => route.filter((segment) => segment.length > 1),
+    [route]
+  );
+
   // MapLibre wants [lng, lat]; every Coordinate in the app is {lat, lng}.
-  const routeGeoJson = useMemo<FeatureCollection<LineString>>(
+  const routeGeoJson = useMemo<FeatureCollection<MultiLineString>>(
     () => ({
       type: "FeatureCollection",
       features:
-        route.length > 1
+        drawableRoute.length > 0
           ? [
               {
                 type: "Feature",
                 properties: {},
                 geometry: {
-                  type: "LineString",
-                  coordinates: route.map((point) => [point.lng, point.lat]),
+                  type: "MultiLineString",
+                  coordinates: drawableRoute.map((segment) =>
+                    segment.map((point) => [point.lng, point.lat])
+                  ),
                 },
               },
             ]
           : [],
     }),
-    [route]
+    [drawableRoute]
   );
 
   const openRiskArea =
@@ -158,7 +169,7 @@ export default function MapWrapper({
           <NavigationControl position={zoomPosition} showCompass visualizePitch />
 
           {/* Selected user's route */}
-          {route.length > 1 && (
+          {drawableRoute.length > 0 && (
             <Source id="wenav-route" type="geojson" data={routeGeoJson}>
               <Layer
                 id="wenav-route-line"

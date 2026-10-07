@@ -571,6 +571,67 @@ describe("WeNav Firestore security rules", () => {
     await assertFails(getDoc(doc(caregiverDb, "liveLocations/user-1")));
   });
 
+  // ─── Route breadcrumbs ─────────────────────────────────────────────────────
+
+  const trackPoint = (extra: Record<string, unknown> = {}) => ({
+    location: { lat: 40.7608, lng: -111.891 },
+    recordedAt: serverTimestamp(),
+    ...extra,
+  });
+
+  test("a user can record a breadcrumb tagged with its walk", async () => {
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+    await assertSucceeds(
+      setDoc(
+        doc(userDb, "liveLocations/user-1/track/p1"),
+        trackPoint({ walkId: "walk-1", capturedAt: new Date() }),
+      ),
+    );
+  });
+
+  test("an app build from before walk tagging can still record", async () => {
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+    await assertSucceeds(
+      setDoc(doc(userDb, "liveLocations/user-1/track/p1"), trackPoint()),
+    );
+  });
+
+  test("a breadcrumb with a malformed walk tag or extra fields is refused", async () => {
+    const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+    await assertFails(
+      setDoc(doc(userDb, "liveLocations/user-1/track/p1"), trackPoint({ walkId: 7 })),
+    );
+    await assertFails(
+      setDoc(doc(userDb, "liveLocations/user-1/track/p2"), trackPoint({ walkId: "" })),
+    );
+    await assertFails(
+      setDoc(
+        doc(userDb, "liveLocations/user-1/track/p3"),
+        trackPoint({ capturedAt: "yesterday" }),
+      ),
+    );
+    await assertFails(
+      setDoc(
+        doc(userDb, "liveLocations/user-1/track/p4"),
+        trackPoint({ speed: 1.4 }),
+      ),
+    );
+  });
+
+  test("a user cannot record breadcrumbs for someone else", async () => {
+    const userDb = testEnv.authenticatedContext("user-2").firestore();
+
+    await assertFails(
+      setDoc(
+        doc(userDb, "liveLocations/user-1/track/p1"),
+        trackPoint({ walkId: "walk-1", capturedAt: new Date() }),
+      ),
+    );
+  });
+
   // ─── Pairing codes ─────────────────────────────────────────────────────────
 
   test("pairing codes are invisible to every client", async () => {

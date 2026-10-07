@@ -27,6 +27,7 @@ import {
   LiveLocation,
   TrackedUser,
 } from "@/lib/types";
+import { latestWalkSegments, TrackPoint } from "@/lib/walkRoute";
 
 // ─── Timestamp helpers ────────────────────────────────────────────────────────
 
@@ -457,15 +458,26 @@ export async function redeemPairingCode(code: string): Promise<string> {
   return result.data.userName;
 }
 
+/** Firestore Timestamp → epoch ms; undefined for a pending or missing value. */
+function toMillis(value: unknown): number | undefined {
+  return value instanceof Timestamp ? value.toDate().getTime() : undefined;
+}
+
 /**
- * Breadcrumb trail for one person, for drawing today's route.
+ * Route of one person's most recent walk, as line segments to draw.
+ *
+ * Only the newest walk is returned (see `latestWalkSegments`), split wherever
+ * GPS dropped out, so separate walks are never joined by a straight line.
  *
  * Subscribed only for the person the caregiver currently has selected — one
  * listener, not one per linked user, since only the selected route is drawn.
+ *
+ * `maxPoints` caps one read at roughly 80 minutes of walking; a longer walk
+ * loses its earliest stretch from the line.
  */
 export function subscribeToUserTrack(
   userId: string,
-  callback: (points: Coordinate[]) => void,
+  callback: (segments: Coordinate[][]) => void,
   maxPoints = 500
 ): () => void {
   const q = query(
@@ -476,12 +488,19 @@ export function subscribeToUserTrack(
   return onSnapshot(
     q,
     (snap) => {
-      const points = snap.docs
-        .map((d) => d.data().location as Coordinate)
-        .filter((loc): loc is Coordinate => !!loc)
-        // Query is newest-first for the limit; the line needs oldest-first.
-        .reverse();
-      callback(points);
+      // Newest-first, as queried; latestWalkSegments puts the walk in order.
+      const points: TrackPoint[] = snap.docs
+        .map((d) => {
+          const data = d.data();
+          return {
+            location: data.location as Coordinate,
+            walkId: typeof data.walkId === "string" ? data.walkId : undefined,
+            capturedAtMs: toMillis(data.capturedAt),
+            recordedAtMs: toMillis(data.recordedAt),
+          };
+        })
+        .filter((point) => !!point.location);
+      callback(latestWalkSegments(points));
     },
     // Scope revoked mid-walk, or nothing recorded yet.
     () => callback([])

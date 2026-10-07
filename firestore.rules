@@ -288,10 +288,24 @@ service cloud.firestore {
           || isAdmin()
           || linkGrants(userId, 'liveLocation'));
 
+      // walkId and capturedAt group points into walks and keep their order.
+      // Optional so an app build from before walk tagging can still record.
       allow create: if isSignedIn()
         && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'location',
+          'recordedAt',
+          'walkId',
+          'capturedAt'
+        ])
         && isValidLocation(request.resource.data.location)
-        && request.resource.data.recordedAt == request.time;
+        && request.resource.data.recordedAt == request.time
+        && (!('walkId' in request.resource.data)
+          || (request.resource.data.walkId is string
+            && request.resource.data.walkId.size() > 0
+            && request.resource.data.walkId.size() <= 64))
+        && (!('capturedAt' in request.resource.data)
+          || request.resource.data.capturedAt is timestamp);
 
       allow update: if false;
       allow delete: if isSignedIn() && request.auth.uid == userId;
