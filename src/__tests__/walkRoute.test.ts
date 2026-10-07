@@ -99,6 +99,19 @@ describe("latestWalkSegments", () => {
     expect(latestWalkSegments(mixed)).toEqual([[at(0), at(1), at(2)]]);
   });
 
+  test("leaves out fixes the phone reported as inaccurate", () => {
+    const points: TrackPoint[] = [
+      { location: at(0), walkId: "w", capturedAtMs: 0, accuracyMeters: 5 },
+      // Bounced off a building: reported as 45 m out, and it shows.
+      { location: { lat: 40.8, lng: -111.8 }, walkId: "w", capturedAtMs: 1, accuracyMeters: 45 },
+      { location: at(1), walkId: "w", capturedAtMs: 2, accuracyMeters: 8 },
+      // Older app builds did not record accuracy; those are kept.
+      { location: at(2), walkId: "w", capturedAtMs: 3 },
+    ].reverse();
+
+    expect(latestWalkSegments(points)).toEqual([[at(0), at(1), at(2)]]);
+  });
+
   test("returns nothing for an empty track or a single point", () => {
     expect(latestWalkSegments([])).toEqual([]);
     expect(latestWalkSegments(walk("w", 1, 0))).toEqual([]);

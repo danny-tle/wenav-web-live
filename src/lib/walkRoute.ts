@@ -13,7 +13,16 @@ export interface TrackPoint {
   capturedAtMs?: number;
   /** Server write time. Points queued offline all share one value. */
   recordedAtMs?: number;
+  /** The phone's own error estimate for the fix, in metres. */
+  accuracyMeters?: number;
 }
+
+/**
+ * Fixes the phone reports as worse than this are left out of the line. The app
+ * already filters at the same threshold before writing; this holds points from
+ * older app builds, or written some other way, to the same standard.
+ */
+export const MAX_ACCURACY_METERS = 20;
 
 /**
  * Consecutive points farther apart than this are drawn as separate pieces
@@ -60,6 +69,11 @@ export function latestWalkSegments(newestFirst: TrackPoint[]): Coordinate[][] {
 
   const walk = newestFirst
     .filter((point) => point.walkId === walkId)
+    .filter(
+      (point) =>
+        point.accuracyMeters === undefined ||
+        point.accuracyMeters <= MAX_ACCURACY_METERS
+    )
     .sort((a, b) => orderKey(a) - orderKey(b));
 
   const segments: Coordinate[][] = [];

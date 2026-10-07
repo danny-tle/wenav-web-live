@@ -585,7 +585,7 @@ describe("WeNav Firestore security rules", () => {
     await assertSucceeds(
       setDoc(
         doc(userDb, "liveLocations/user-1/track/p1"),
-        trackPoint({ walkId: "walk-1", capturedAt: new Date() }),
+        trackPoint({ walkId: "walk-1", capturedAt: new Date(), accuracy: 6.5 }),
       ),
     );
   });
@@ -617,6 +617,18 @@ describe("WeNav Firestore security rules", () => {
       setDoc(
         doc(userDb, "liveLocations/user-1/track/p4"),
         trackPoint({ speed: 1.4 }),
+      ),
+    );
+    await assertFails(
+      setDoc(
+        doc(userDb, "liveLocations/user-1/track/p5"),
+        trackPoint({ accuracy: -1 }),
+      ),
+    );
+    await assertFails(
+      setDoc(
+        doc(userDb, "liveLocations/user-1/track/p6"),
+        trackPoint({ accuracy: "good" }),
       ),
     );
   });

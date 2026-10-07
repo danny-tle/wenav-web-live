@@ -288,7 +288,8 @@ service cloud.firestore {
           || isAdmin()
           || linkGrants(userId, 'liveLocation'));
 
-      // walkId and capturedAt group points into walks and keep their order.
+      // walkId and capturedAt group points into walks and keep their order;
+      // accuracy is the phone's error estimate in metres.
       // Optional so an app build from before walk tagging can still record.
       allow create: if isSignedIn()
         && request.auth.uid == userId
@@ -296,7 +297,8 @@ service cloud.firestore {
           'location',
           'recordedAt',
           'walkId',
-          'capturedAt'
+          'capturedAt',
+          'accuracy'
         ])
         && isValidLocation(request.resource.data.location)
         && request.resource.data.recordedAt == request.time
@@ -305,7 +307,11 @@ service cloud.firestore {
             && request.resource.data.walkId.size() > 0
             && request.resource.data.walkId.size() <= 64))
         && (!('capturedAt' in request.resource.data)
-          || request.resource.data.capturedAt is timestamp);
+          || request.resource.data.capturedAt is timestamp)
+        && (!('accuracy' in request.resource.data)
+          || ((request.resource.data.accuracy is int
+              || request.resource.data.accuracy is float)
+            && request.resource.data.accuracy >= 0));
 
       allow update: if false;
       allow delete: if isSignedIn() && request.auth.uid == userId;

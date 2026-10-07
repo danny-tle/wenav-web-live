@@ -497,6 +497,8 @@ export function subscribeToUserTrack(
             walkId: typeof data.walkId === "string" ? data.walkId : undefined,
             capturedAtMs: toMillis(data.capturedAt),
             recordedAtMs: toMillis(data.recordedAt),
+            accuracyMeters:
+              typeof data.accuracy === "number" ? data.accuracy : undefined,
           };
         })
         .filter((point) => !!point.location);
