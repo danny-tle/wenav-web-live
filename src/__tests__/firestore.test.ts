@@ -21,6 +21,7 @@ const mockCollection = jest.fn((...args: unknown[]) => ({ path: args[1] }));
 const mockDoc = jest.fn((...args: unknown[]) => ({ path: args[1], id: args[2] }));
 const mockQuery = jest.fn((...args: unknown[]) => args[0]);
 const mockOrderBy = jest.fn();
+const mockLimit = jest.fn();
 const mockServerTimestamp = jest.fn(() => "__SERVER_TS__");
 
 jest.mock("firebase/firestore", () => ({
@@ -34,6 +35,7 @@ jest.mock("firebase/firestore", () => ({
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
   orderBy: (...args: unknown[]) => mockOrderBy(...args),
+  limit: (...args: unknown[]) => mockLimit(...args),
   serverTimestamp: () => mockServerTimestamp(),
   // Fake Timestamp: toDate() converts the stored ISO string to a Date.
   Timestamp: class {
@@ -55,7 +57,9 @@ import {
   subscribeToUserProfiles,
   upsertUserProfile,
   getUserProfile,
+  subscribeToUserTrack,
 } from "@/lib/firestore";
+import { Timestamp } from "firebase/firestore";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -546,5 +550,66 @@ describe("getUserProfile", () => {
     await getUserProfile("uid-check");
 
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), "users", "uid-check");
+  });
+});
+
+// ─── subscribeToUserTrack ─────────────────────────────────────────────────────
+
+describe("subscribeToUserTrack", () => {
+  // The mocked Timestamp takes an ISO string (see the firebase/firestore mock).
+  const MockTimestamp = Timestamp as unknown as new (iso: string) => Timestamp;
+  const at = (seconds: number) =>
+    new MockTimestamp(new Date(Date.UTC(2026, 9, 7, 12, 0, seconds)).toISOString());
+
+  test("reads the user's track newest-first, capped at maxPoints", () => {
+    subscribeToUserTrack("user-1", jest.fn(), 200);
+
+    expect(mockCollection).toHaveBeenCalledWith(
+      expect.anything(),
+      "liveLocations",
+      "user-1",
+      "track"
+    );
+    expect(mockOrderBy).toHaveBeenCalledWith("recordedAt", "desc");
+    expect(mockLimit).toHaveBeenCalledWith(200);
+  });
+
+  test("delivers only the latest walk, in capture order", () => {
+    const a = { lat: 40.76, lng: -111.891 };
+    const b = { lat: 40.7601, lng: -111.891 };
+    const c = { lat: 40.7602, lng: -111.891 };
+    mockOnSnapshot.mockImplementation((_q: unknown, cb: (snap: unknown) => void) => {
+      cb(
+        makeSnap([
+          // Newest walk; the last two arrived together with one server time.
+          { id: "3", data: { location: b, walkId: "w2", capturedAt: at(10), recordedAt: at(30) } },
+          { id: "2", data: { location: c, walkId: "w2", capturedAt: at(20), recordedAt: at(30) } },
+          { id: "1", data: { location: a, walkId: "w2", capturedAt: at(0), recordedAt: at(1) } },
+          // An earlier walk across town, and a point from before tagging.
+          { id: "0", data: { location: { lat: 40.5, lng: -112 }, walkId: "w1", capturedAt: at(0) } },
+          { id: "x", data: { location: { lat: 40.4, lng: -112 }, recordedAt: at(0) } },
+        ])
+      );
+      return jest.fn();
+    });
+    const callback = jest.fn();
+
+    subscribeToUserTrack("user-1", callback);
+
+    expect(callback).toHaveBeenCalledWith([[a, b, c]]);
+  });
+
+  test("delivers an empty route when the read is refused", () => {
+    mockOnSnapshot.mockImplementation(
+      (_q: unknown, _cb: unknown, onError: (e: Error) => void) => {
+        onError(new Error("permission-denied"));
+        return jest.fn();
+      }
+    );
+    const callback = jest.fn();
+
+    subscribeToUserTrack("user-1", callback);
+
+    expect(callback).toHaveBeenCalledWith([]);
   });
 });
