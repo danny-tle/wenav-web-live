@@ -166,14 +166,19 @@ export default function AdminIncidentsPage() {
 
       {/* Table */}
       <div className="bg-white rounded-wenav border border-gray-100 flex-1 overflow-auto">
+        {/* Header and rows share one column template. The last column is a
+            fixed width (not auto) so rows with Reject/Confirm buttons line up
+            with rows without them. On narrow screens the table scrolls
+            sideways instead of crushing the columns. */}
+        <div className="min-w-[960px]">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_1.5fr_1fr_0.8fr_0.8fr_auto] gap-4 px-6 py-3 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_13rem] gap-4 px-6 py-3 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
           <span>Submitted Date</span>
           <span>Location</span>
           <span>Type</span>
           <span>Status</span>
           <span>Last Updated</span>
-          <span className="text-right pr-2">
+          <span className="whitespace-nowrap text-right">
             Showing 1 – {Math.min(10, displayIncidents.length)} of {displayIncidents.length}{" "}
             <ChevronRight size={12} className="inline" />
           </span>
@@ -186,7 +191,7 @@ export default function AdminIncidentsPage() {
             <div key={incident.id} className="border-b border-gray-50 last:border-0">
               {/* Main row */}
               <div
-                className="grid grid-cols-[1fr_1.5fr_1fr_0.8fr_0.8fr_auto] gap-4 px-6 py-4 items-center hover:bg-gray-50/50 cursor-pointer"
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_13rem] gap-4 px-6 py-4 items-center hover:bg-gray-50/50 cursor-pointer"
                 onClick={() => toggleExpand(incident.id)}
               >
                 <span className="text-sm text-gray-700">{incident.date}</span>
@@ -204,7 +209,7 @@ export default function AdminIncidentsPage() {
                   {incident.status}
                 </span>
                 <span className="text-sm text-gray-500">{incident.lastUpdated}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2">
                   {incident.status === "In-process" && (
                     <>
                       <button
@@ -279,6 +284,7 @@ export default function AdminIncidentsPage() {
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

@@ -19,3 +19,11 @@ body {
   width: 100%;
   height: 100%;
 }
+
+/* Admin map on phones: push the zoom/compass controls below the floating
+   sidebar toggle, which sits in the map's top-left corner. */
+@media (max-width: 1023px) {
+  .admin-map .maplibregl-ctrl-top-left {
+    top: 48px;
+  }
+}

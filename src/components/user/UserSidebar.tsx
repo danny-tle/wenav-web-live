@@ -81,6 +81,16 @@ const handleLogout = async () => {
     setShowNotifications(false);
   };
 
+  // On phones the open sidebar is a drawer over the page, so picking a page
+  // should put it away. On desktop it is a column that stays as the user left it.
+  const closeIfPhone = () => {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setIsOpen(false);
+      setShowNotifications(false);
+      setShowUserMenu(false);
+    }
+  };
+
   return (
     <>
       {showUserMenu && (
@@ -91,9 +101,23 @@ const handleLogout = async () => {
           className="fixed inset-0 z-[999] cursor-default"
         />
       )}
+      {/* Phone backdrop behind the open drawer */}
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={handleToggleSidebar}
+          className="fixed inset-0 z-[990] cursor-default bg-black/30 md:hidden"
+        />
+      )}
+
+      {/* Phones: hidden until opened, then a drawer from the left.
+          md and up: the original collapsible column. */}
       <aside
-        className={`relative z-[1000] flex h-full flex-shrink-0 flex-col border-r border-gray-100 bg-white transition-[width] duration-300 ${
-          isOpen ? "w-64" : "w-20"
+        className={`z-[1000] h-full flex-shrink-0 flex-col border-r border-gray-100 bg-white transition-[width] duration-300 md:relative md:flex ${
+          isOpen
+            ? "fixed inset-y-0 left-0 flex w-64 shadow-xl md:shadow-none"
+            : "hidden md:w-20"
         }`}
       >
         {/* User information */}
@@ -198,6 +222,7 @@ const handleLogout = async () => {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={closeIfPhone}
                 title={!isOpen ? item.label : undefined}
                 className={`mb-1 flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors ${
                   isOpen
@@ -262,12 +287,54 @@ const handleLogout = async () => {
         </div>
       </aside>
 
-      {/* Notification panel for closing */}
+      {/* Notification panel. On phones it slides over the drawer instead of
+          squeezing the page next to it. */}
       {showNotifications && isOpen && (
-        <NotificationPanel
-          onClose={() => setShowNotifications(false)}
-        />
+        <div className="fixed inset-y-0 left-0 z-[1010] h-full max-w-[90vw] md:static md:z-auto md:max-w-none">
+          <NotificationPanel
+            onClose={() => setShowNotifications(false)}
+          />
+        </div>
       )}
+
+      {/* Phone bottom tab bar */}
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-[980] flex border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
+      >
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={closeIfPhone}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium ${
+                isActive ? "text-wenav-purple" : "text-gray-500"
+              }`}
+            >
+              <Icon size={20} />
+              {item.label.replace("View ", "")}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(true);
+            setShowUserMenu(false);
+          }}
+          className="flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium text-gray-500"
+          aria-label="Open menu"
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-wenav-gray text-[10px] font-semibold text-gray-600">
+            {initial}
+          </span>
+          Menu
+        </button>
+      </nav>
     </>
   );
 }

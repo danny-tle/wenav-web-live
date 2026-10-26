@@ -221,7 +221,7 @@ export default function AdminDashboardMap() {
   const selectedIncident = incidents.find((inc) => inc.id === selectedIncidentId) ?? null;
 
   return (
-    <div className="h-full w-full relative">
+    <div className="admin-map h-full w-full relative">
       <MapGL
         ref={mapRef}
         initialViewState={{
@@ -369,8 +369,10 @@ export default function AdminDashboardMap() {
         )}
       </MapGL>
 
-      {/* Top right overlay: search + stats */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3 w-72">
+      {/* Search + stats. On phones it spans the map (leaving room on the left
+          for the sidebar toggle) and the stats sit in one compact row; from
+          lg up it is the original narrow column in the top-right corner. */}
+      <div className="absolute top-3 left-14 right-3 z-[1000] flex flex-col gap-2 lg:top-4 lg:left-auto lg:right-4 lg:w-72 lg:gap-3">
         {/* Address search */}
         <div ref={dropdownRef}>
           <div className="flex items-center bg-white rounded-wenav shadow-md px-4 py-3">
@@ -410,28 +412,37 @@ export default function AdminDashboardMap() {
         </div>
 
         {/* Stats cards */}
-        <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-red-400 font-medium">Total Users</span>
-          <span className="text-sm font-bold text-wenav-dark">{totalUsers}</span>
-        </div>
-        <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-red-400 font-medium">Pending Reports</span>
-          <span className="text-sm font-bold text-wenav-dark">
-            {incidents.filter((i) => i.status === "under_review").length}
-          </span>
-        </div>
-        <div className="bg-white rounded-wenav shadow-md px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-red-400 font-medium">Approved Incidents</span>
-          <span className="text-sm font-bold text-wenav-dark">
-            {incidents.filter((i) => i.status === "approved").length}
-          </span>
+        <div className="grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-3">
+          {[
+            { label: "Total Users", value: totalUsers },
+            {
+              label: "Pending Reports",
+              value: incidents.filter((i) => i.status === "under_review").length,
+            },
+            {
+              label: "Approved Incidents",
+              value: incidents.filter((i) => i.status === "approved").length,
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white rounded-wenav shadow-md px-3 py-2 flex flex-col-reverse items-start gap-0.5 lg:px-4 lg:py-3 lg:flex-row lg:items-center lg:justify-between"
+            >
+              <span className="text-[11px] leading-tight text-red-400 font-medium lg:text-sm">
+                {stat.label}
+              </span>
+              <span className="text-base font-bold text-wenav-dark lg:text-sm">
+                {stat.value}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Instructions overlay */}
       {!pendingPin && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm rounded-wenav px-4 py-2 shadow-sm">
-          <p className="text-xs text-gray-500">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100%-2rem)] max-w-md bg-white/90 backdrop-blur-sm rounded-wenav px-4 py-2 shadow-sm">
+          <p className="text-xs text-gray-500 text-center">
             Click anywhere on the map to add an incident, then click the pin to set type + description
           </p>
         </div>

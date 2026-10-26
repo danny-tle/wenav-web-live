@@ -15,7 +15,7 @@ export default function DashboardLayout({
         {/* <DashboardTopbar /> */}
         <div className="flex flex-1 overflow-hidden bg-wenav-gray">
           <UserSidebar />
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="min-w-0 flex-1 overflow-auto pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
         </div>
       </div>
     </AuthGuard>

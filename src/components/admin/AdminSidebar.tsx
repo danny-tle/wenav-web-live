@@ -36,7 +36,7 @@ export default function AdminSidebar() {
     <>
       {/* Admin + notification header */}
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 pl-12 lg:pl-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
               <span className="text-xs font-semibold text-emerald-600">{initial}</span>
@@ -94,9 +94,10 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile toggle */}
+      {/* Mobile toggle. z-indexes here sit above the map's overlays
+          (z-[1000]) so the open drawer covers the search and stat cards. */}
       <button
-        className="lg:hidden fixed top-[72px] left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+        className="lg:hidden fixed top-[68px] left-4 z-[1300] p-2 bg-white rounded-lg shadow-md"
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label="Toggle sidebar"
       >
@@ -106,14 +107,14 @@ export default function AdminSidebar() {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-40"
+          className="lg:hidden fixed inset-0 bg-black/30 z-[1100]"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-14 left-0 z-40 w-64 bg-white border-r border-gray-100 flex flex-col transition-transform lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-14 left-0 z-[1200] lg:z-auto w-64 bg-white border-r border-gray-100 flex flex-col transition-transform lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

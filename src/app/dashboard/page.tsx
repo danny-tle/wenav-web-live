@@ -79,7 +79,9 @@ export default function DashboardPage() {
         flyToZoom={16}
       />
 
-      <div className="absolute right-4 top-4 z-[500] flex w-72 flex-col gap-3">
+      {/* Phones: a scrollable stack along the bottom, so the map and its zoom
+          controls stay visible up top. md and up: the top-right column. */}
+      <div className="absolute inset-x-3 bottom-3 z-[500] flex max-h-[45%] flex-col gap-3 overflow-y-auto md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-72">
         <UserList
           users={users}
           selectedUserId={selectedUserId}

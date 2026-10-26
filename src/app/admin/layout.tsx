@@ -15,7 +15,7 @@ export default function AdminLayout({
         <DashboardTopbar />
         <div className="flex flex-1 overflow-hidden bg-wenav-gray">
           <AdminSidebar />
-          <main className="flex-1 overflow-auto p-6 lg:p-8">{children}</main>
+          <main className="flex-1 min-w-0 overflow-auto p-3 sm:p-6 lg:p-8">{children}</main>
         </div>
       </div>
     </AdminGuard>
