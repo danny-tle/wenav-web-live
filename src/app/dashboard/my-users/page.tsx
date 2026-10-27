@@ -143,9 +143,12 @@ export default function MyUsersPage() {
   return (
     <div className="h-full flex flex-col">
 
-      <div className="flex min-h-[400px] flex-1">
+      {/* Phones: one scrolling column — list, map, then details.
+          md and up: list on the left, map filling the rest with the
+          details floating over it. */}
+      <div className="flex min-h-[400px] flex-1 flex-col overflow-y-auto md:flex-row md:overflow-visible">
         {/* User list panel */}
-        <div className="flex w-72 flex-shrink-0 flex-col bg-white">
+        <div className="flex w-full flex-shrink-0 flex-col border-b border-gray-100 bg-white md:w-72 md:border-b-0">
           {/* Header */}
           <div className="border-b border-gray-100 p-4">
             <div className="flex items-center justify-between">
@@ -165,7 +168,7 @@ export default function MyUsersPage() {
 
           {/* Paring UserLists */}
           {users.length > 0 && (
-          <ul className="flex-1 space-y-2 overflow-y-auto p-4">
+          <ul className="space-y-2 overflow-y-auto p-4 md:flex-1">
             {users.map((user) => {
               const isSelected = selectedUserId === user.id;
 
@@ -206,7 +209,7 @@ export default function MyUsersPage() {
 
           {/* Empty state */}
           {users.length === 0 && (
-            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+            <div className="flex flex-col items-center justify-center px-6 py-8 text-center md:flex-1 md:py-0">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-wenav-gray">
                 <Users size={20} className="text-gray-400" />
               </div>
@@ -223,7 +226,8 @@ export default function MyUsersPage() {
         </div>
 
         {/* Map panel */}
-        <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="relative flex-shrink-0 md:min-w-0 md:flex-1 md:overflow-hidden">
+          <div className="h-72 md:h-full">
           <MapWrapper
             scrollWheelZoom={true}
             selectedLocation={
@@ -257,6 +261,7 @@ export default function MyUsersPage() {
             }
             flyToZoom={focusedLocation ? 17 : 14}
           />
+          </div>
 
           {selectedUser && (
             <UserDetailsPanel 

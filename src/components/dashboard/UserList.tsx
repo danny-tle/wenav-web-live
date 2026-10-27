@@ -13,7 +13,7 @@ export default function UserList({
   onSelectUser,
 }: UserListProps) {
   return (
-    <Card className="w-72">
+    <Card className="w-full">
       <h2 className="text-sm text-gray-400 mb-3">
         My Users ({users.length})
       </h2>

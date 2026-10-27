@@ -55,7 +55,7 @@ export default function UserDetailsPanel({
     });
 
   return (
-    <div className="absolute bottom-1 right-1 top-4 z-[500] flex w-72 flex-col gap-3 overflow-y-auto pr-1">
+    <div className="flex w-full flex-col gap-3 p-3 md:absolute md:bottom-1 md:right-1 md:top-4 md:z-[500] md:w-72 md:overflow-y-auto md:p-0 md:pr-1">
       {/* Home */}
         <Card className="w-full">
         <div className="mb-3 flex items-center justify-between">

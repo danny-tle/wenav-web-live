@@ -212,18 +212,18 @@ export default function IncidentsPage() {
       </div>
 
       {/* Incident content */}
-      <section className="absolute inset-x-0 bottom-0 top-56 z-[500] overflow-y-auto rounded-t-[40px] bg-white px-8 py-8 shadow-[0_-6px_24px_rgba(0,0,0,0.06)]">
+      <section className="absolute inset-x-0 bottom-0 top-40 z-[500] overflow-y-auto rounded-t-3xl bg-white px-4 py-6 shadow-[0_-6px_24px_rgba(0,0,0,0.06)] md:top-56 md:rounded-t-[40px] md:px-8 md:py-8">
         <div className="mx-auto max-w-[1500px]">
           {/* Title */}
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-wenav-dark">
+          <div className="mb-5 flex items-center justify-between gap-3 md:mb-6">
+            <h1 className="min-w-0 text-xl font-bold text-wenav-dark md:text-2xl">
               Total Incidents {filteredIncidents.length}
             </h1>
 
             <button
               type="button"
               onClick={openModal}
-              className="flex items-center gap-2 rounded-wenav bg-wenav-purple px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-wenav bg-wenav-purple px-3 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 md:px-4"
             >
               <Plus size={16} />
               Report Incident
@@ -231,7 +231,7 @@ export default function IncidentsPage() {
           </div>
 
           {/* Search and filters */}
-          <div className="mb-6 flex gap-3">
+          <div className="mb-4 flex flex-col gap-3 md:mb-6 md:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search
                 size={17}
@@ -249,7 +249,7 @@ export default function IncidentsPage() {
               />
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2 md:flex-nowrap md:gap-3">
               <div className="relative">
                 <select
                   value={statusFilter}
@@ -317,7 +317,7 @@ export default function IncidentsPage() {
           </div>
 
           {/* Column labels */}
-          <div className="grid grid-cols-[1.25fr_2fr_1fr_1fr_1fr_0.8fr_24px] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-400">
+          <div className="hidden grid-cols-[1.25fr_2fr_1fr_1fr_1fr_0.8fr_24px] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-400 md:grid">
             <span>Submitted Date</span>
             <span>Location</span>
             <span>Type</span>
@@ -348,45 +348,61 @@ export default function IncidentsPage() {
                       onClick={() =>
                         handleIncidentClick(incident)
                       }
-                      className="grid w-full grid-cols-[1.25fr_2fr_1fr_1fr_1fr_0.8fr_24px] items-center gap-4 px-5 py-5 text-left"
+                      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-1 py-4 text-left md:grid-cols-[1.25fr_2fr_1fr_1fr_1fr_0.8fr_24px] md:gap-4 md:px-5 md:py-5"
                     >
-                      <span className="text-sm text-gray-700">
+                      {/* Phones show a card: type + status, then address,
+                          then date. md and up: the table row. */}
+                      <span className="order-3 col-span-2 text-xs text-gray-400 md:order-none md:col-span-1 md:text-sm md:text-gray-700">
                         {incident.reportedAt}
                       </span>
 
-                      <span className="truncate text-sm text-gray-700">
+                      <span className="order-2 col-span-2 truncate text-sm text-gray-700 md:order-none md:col-span-1">
                         {incident.address}
                       </span>
 
-                      <span className="text-sm text-gray-700">
+                      <span className="order-1 text-sm font-medium text-gray-800 md:order-none md:font-normal md:text-gray-700">
                         {TYPE_LABELS[incident.type]}
                       </span>
 
                       <span
-                        className={`w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
+                        className={`order-1 w-fit justify-self-end rounded-full px-2.5 py-1 text-xs font-medium md:order-none md:justify-self-auto ${
                           STATUS_STYLES[incident.status]
                         }`}
                       >
                         {STATUS_LABELS[incident.status]}
                       </span>
 
-                      <span className="text-sm text-gray-700">
+                      <span className="hidden text-sm text-gray-700 md:block">
                         {incident.lastUpdated ?? "—"}
                       </span>
 
-                      <span className="truncate text-sm text-gray-700">
+                      <span className="hidden truncate text-sm text-gray-700 md:block">
                         {incident.reportedBy}
                       </span>
 
-                      {isExpanded ? (
-                        <ChevronUp size={17} />
-                      ) : (
-                        <ChevronDown size={17} />
-                      )}
+                      <span className="hidden md:block">
+                        {isExpanded ? (
+                          <ChevronUp size={17} />
+                        ) : (
+                          <ChevronDown size={17} />
+                        )}
+                      </span>
                     </button>
 
                     {isExpanded && (
-                      <div className="px-5 pb-6">
+                      <div className="px-1 pb-6 md:px-5">
+                        {/* Columns the phone card leaves out */}
+                        <div className="mb-4 grid grid-cols-2 gap-3 md:hidden">
+                          <div>
+                            <p className="mb-1 text-xs text-gray-400">Last Updated</p>
+                            <p className="text-sm text-gray-700">{incident.lastUpdated ?? "—"}</p>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="mb-1 text-xs text-gray-400">User</p>
+                            <p className="truncate text-sm text-gray-700">{incident.reportedBy}</p>
+                          </div>
+                        </div>
+
                         <div className="mb-6">
                           <p className="mb-2 text-xs text-gray-400">
                             Verification Note
@@ -399,13 +415,13 @@ export default function IncidentsPage() {
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-8">
                           <div>
                             <p className="mb-3 text-xs text-gray-400">
                               Media
                             </p>
 
-                            <div className="flex h-36 w-40 items-center justify-center rounded-2xl bg-gray-200">
+                            <div className="flex h-24 w-32 items-center justify-center rounded-2xl bg-gray-200 md:h-36 md:w-40">
                               <div className="h-0 w-0 border-b-[18px] border-l-[28px] border-t-[18px] border-b-transparent border-l-gray-500 border-t-transparent" />
                             </div>
                           </div>
@@ -415,11 +431,11 @@ export default function IncidentsPage() {
                               Photos
                             </p>
 
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 overflow-x-auto">
                               {[1, 2, 3].map((photo) => (
                                 <div
                                   key={photo}
-                                  className="flex h-36 w-36 items-center justify-center rounded-2xl bg-gray-200 text-gray-400"
+                                  className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-2xl bg-gray-200 text-gray-400 md:h-36 md:w-36"
                                 >
                                   <FileText size={28} />
                                 </div>
