@@ -112,6 +112,71 @@ export const HYBRID_3D_STYLE: StyleSpecification = {
   ],
 };
 
+/**
+ * Zoom band over which the hero's satellite imagery hands off to the light-gray
+ * basemap. Below the start it's all satellite (the "from space" look); past the
+ * end it's the same cartography every other map uses.
+ */
+const SATELLITE_FADE_START = 6;
+const SATELLITE_FADE_END = 9;
+
+/**
+ * Landing-page hero style: HYBRID_3D_STYLE rendered on a globe.
+ *
+ * At low zoom the globe shows Esri satellite imagery with an atmosphere glow,
+ * so the intro can start "in space". MapLibre's "globe" projection blends to
+ * flat mercator on its own as you zoom in (around z10–12), and the imagery
+ * fades out to the light-gray basemap over the same stretch, so by city zoom
+ * it looks identical to the regular map.
+ *
+ * Only the hero uses this — dashboard maps stay on MAP_STYLE.
+ */
+export const HERO_GLOBE_STYLE: StyleSpecification = {
+  ...HYBRID_3D_STYLE,
+  projection: { type: "globe" },
+  sky: {
+    // Glow around the globe from space; gone by the time we're over a city.
+    "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0],
+    "sky-color": "#dfe6f0",
+    "horizon-color": "#ffffff",
+  },
+  sources: {
+    ...HYBRID_3D_STYLE.sources,
+    satellite: {
+      type: "raster",
+      tiles: [
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        "Imagery &copy; Esri &mdash; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    },
+  },
+  layers: [
+    HYBRID_3D_STYLE.layers[0],
+    {
+      id: "satellite-layer",
+      type: "raster",
+      source: "satellite",
+      // Stop requesting imagery tiles once it's fully faded out.
+      maxzoom: SATELLITE_FADE_END + 1,
+      paint: {
+        "raster-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          SATELLITE_FADE_START,
+          1,
+          SATELLITE_FADE_END,
+          0,
+        ],
+      },
+    },
+    ...HYBRID_3D_STYLE.layers.slice(1),
+  ],
+};
+
 /** Keyless vector alternative — swap in if you'd rather have vector tiles. */
 export const OPENFREEMAP_POSITRON_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
@@ -144,3 +209,4 @@ export const CARTO_LIGHT_RASTER_STYLE: StyleSpecification = {
 };
 
 export const MAP_STYLE = HYBRID_3D_STYLE;
+
