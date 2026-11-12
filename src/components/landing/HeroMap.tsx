@@ -2,23 +2,44 @@
 
 import dynamic from "next/dynamic";
 import { Search, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { Map as MaplibreMap } from "maplibre-gl";
 import { subscribeToPublicIncidents } from "@/lib/firestore";
 import { PublicIncident } from "@/lib/types";
+import { HERO_GLOBE_STYLE } from "@/lib/mapStyle";
+import { MAP_DEFAULTS } from "@/lib/constants";
+import {
+  INTRO_START_CENTER,
+  INTRO_START_ZOOM,
+  useGlobeIntro,
+  type IntroPhase,
+} from "@/lib/useGlobeIntro";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
   loading: () => (
-    <div className="w-full z-10 h-full bg-wenav-gray animate-pulse rounded-wenav flex items-center justify-center">
-      <p className="text-gray-400">Loading map...</p>
+    // Transparent so the hero's starfield shows while the globe loads.
+    <div className="w-full z-10 h-full flex items-center justify-center">
+      <p className="text-white/50 text-sm">Loading map...</p>
     </div>
   ),
+});
+
+const GlobeBeacon = dynamic(() => import("@/components/landing/GlobeBeacon"), {
+  ssr: false,
 });
 
 const ApprovedIncidentMarkers = dynamic(
   () => import("@/components/landing/ApprovedIncidentMarkers"),
   { ssr: false }
 );
+
+/** Caption shown under the map for each stage of the intro. */
+const INTRO_CAPTIONS: Partial<Record<IntroPhase, string>> = {
+  space: "Welcome to WeNav",
+  city: "Reported incidents · Salt Lake City",
+  street: "Street-level 3D view",
+};
 
 interface NominatimResult {
   place_id: number;
@@ -28,6 +49,16 @@ interface NominatimResult {
 }
 
 export default function HeroMap() {
+  const { phase, start: startIntro, skip: skipIntro } = useGlobeIntro();
+  const introPlaying = phase !== "done";
+  const [map, setMap] = useState<MaplibreMap | null>(null);
+  const handleMapLoad = useCallback(
+    (loaded: MaplibreMap) => {
+      setMap(loaded);
+      void startIntro(loaded);
+    },
+    [startIntro]
+  );
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NominatimResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,15 +124,58 @@ export default function HeroMap() {
   }
 
   return (
-    <section id="home" className="relative w-full h-[100vh] pt-16">
-      <MapWrapper scrollWheelZoom={true} className="h-full w-full" flyToLocation={flyToLocation}>
-        <ApprovedIncidentMarkers incidents={incidents} />
+    <section id="home" className="relative w-full h-[100vh] pt-16 bg-[#030712]">
+      <div aria-hidden="true" className="hero-starfield pointer-events-none absolute inset-0" />
+      <MapWrapper
+        scrollWheelZoom={true}
+        className="relative z-10 h-full w-full"
+        flyToLocation={flyToLocation}
+        mapStyle={HERO_GLOBE_STYLE}
+        center={INTRO_START_CENTER}
+        zoom={INTRO_START_ZOOM}
+        onLoad={handleMapLoad}
+      >
+        {/* HTML markers float over the globe even when they're on its far
+            side, so hold the pins back until we've landed on the city. */}
+        {phase !== "idle" && phase !== "space" && (
+          <ApprovedIncidentMarkers incidents={incidents} />
+        )}
       </MapWrapper>
+      {/* A beam of light over Salt Lake City while we're up in space. */}
+      <GlobeBeacon map={map} location={MAP_DEFAULTS.center} />
+
+      {introPlaying && (
+        <div className="absolute bottom-14 left-0 right-0 z-[1000] flex items-center justify-center gap-4 px-4 text-white">
+          {INTRO_CAPTIONS[phase] && (
+          <span
+            key={phase}
+            aria-live="polite"
+            className="rounded-full bg-black/40 px-4 py-1.5 text-xs font-medium tracking-[0.2em] text-white/85 uppercase backdrop-blur animate-[intro-caption_600ms_ease-out]"
+          >
+            {INTRO_CAPTIONS[phase]}
+          </span>
+          )}
+          <button
+            type="button"
+            onClick={skipIntro}
+            className="rounded-full border border-white/30 bg-black/30 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur transition-colors hover:bg-white/15"
+          >
+            Skip intro
+          </button>
+        </div>
+      )}
 
       {/* Search bar overlay */}
-      <div className="absolute top-20 left-0 right-0 z-[1000] pointer-events-none">
+      <div
+        className={`absolute top-20 left-0 right-0 z-[1000] pointer-events-none transition-opacity duration-500 ${
+          introPlaying ? "opacity-0" : "opacity-100"
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div ref={dropdownRef} className="w-[420px] ml-10 pointer-events-auto">
+          <div
+            ref={dropdownRef}
+            className={`w-[420px] ml-10 ${introPlaying ? "pointer-events-none" : "pointer-events-auto"}`}
+          >
             <div className="flex items-center bg-white rounded-wenav px-4 py-3 border border-gray-200 shadow-sm">
               <Search size={18} className="text-gray-400 mr-3 flex-shrink-0" />
               <input

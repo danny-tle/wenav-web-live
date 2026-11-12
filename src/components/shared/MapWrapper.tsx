@@ -10,7 +10,11 @@ import {
   Layer,
   MapRef,
 } from "react-map-gl/maplibre";
-import type { ControlPosition } from "maplibre-gl";
+import type {
+  ControlPosition,
+  Map as MaplibreMap,
+  StyleSpecification,
+} from "maplibre-gl";
 import type { FeatureCollection, MultiLineString } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_DEFAULTS } from "@/lib/constants";
@@ -58,6 +62,10 @@ interface MapWrapperProps {
   route?: Coordinate[][];
   /** Individual recorded stops along the route. */
   historyPoints?: HistoryPoint[];
+  /** Basemap style override. Defaults to the shared MAP_STYLE. */
+  mapStyle?: StyleSpecification;
+  /** Called once the style has loaded, with the underlying MapLibre map. */
+  onLoad?: (map: MaplibreMap) => void;
 }
 
 /**
@@ -88,6 +96,8 @@ export default function MapWrapper({
   selectedLocationLabel = "Current user location",
   route = [],
   historyPoints = [],
+  mapStyle = MAP_STYLE,
+  onLoad,
 }: MapWrapperProps) {
   const mapRef = useRef<MapRef>(null);
   const { flyToLocation: flyTo, syncPitchToZoom } = useMapCamera(mapRef);
@@ -160,11 +170,12 @@ export default function MapWrapper({
             longitude: center[1],
             zoom,
           }}
-          mapStyle={MAP_STYLE}
+          mapStyle={mapStyle}
           style={{ width: "100%", height: "100%" }}
           scrollZoom={scrollWheelZoom}
           maxPitch={TILTED_PITCH}
           onZoomEnd={syncPitchToZoom}
+          onLoad={(event) => onLoad?.(event.target)}
         >
           <NavigationControl position={zoomPosition} showCompass visualizePitch />
 

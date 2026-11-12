@@ -20,10 +20,49 @@ body {
   height: 100%;
 }
 
+.hero-starfield {
+  background-color: #030712;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 75%) 50%, transparent),
+    radial-gradient(1px 1px at 74% 27%, rgb(255 255 255 / 55%) 50%, transparent),
+    radial-gradient(1px 1px at 38% 72%, rgb(255 255 255 / 65%) 50%, transparent),
+    radial-gradient(1px 1px at 88% 81%, rgb(255 255 255 / 50%) 50%, transparent),
+    radial-gradient(1px 1px at 55% 43%, rgb(255 255 255 / 45%) 50%, transparent);
+  background-size: 311px 283px, 367px 331px, 421px 389px, 503px 457px, 277px 347px;
+  animation: star-drift 32s linear infinite;
+}
+
+@keyframes star-drift {
+  from {
+    background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 120px 55px, -90px 70px, 75px -100px, -110px -65px, 60px 90px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-starfield {
+    animation: none;
+  }
+}
+
 /* Admin map on phones: push the zoom/compass controls below the floating
    sidebar toggle, which sits in the map's top-left corner. */
 @media (max-width: 1023px) {
   .admin-map .maplibregl-ctrl-top-left {
     top: 48px;
+  }
+}
+
+/* Landing-page intro captions fade up as each stage begins. */
+@keyframes intro-caption {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
