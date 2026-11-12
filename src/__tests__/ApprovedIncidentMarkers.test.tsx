@@ -2,12 +2,33 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ApprovedIncidentMarkers from "@/components/landing/ApprovedIncidentMarkers";
 import { Incident, PublicIncident } from "@/lib/types";
+import { TILTED_PITCH } from "@/lib/mapStyle";
 
 // react-map-gl's Marker/Popup are siblings, not nested — a marker's onClick
 // selects it, and the popup only renders for whichever one is selected. The
 // mock mirrors that: clicking the marker mock invokes onClick like a real
 // map click would.
+// Where the fake camera currently is; tests move it around.
+const mockCamera = { lng: -111.89, lat: 40.76, zoom: 13, pitch: 0, bearing: 0 };
+
+const mockMap = {
+  flyTo: jest.fn(),
+  jumpTo: jest.fn(),
+  once: jest.fn(),
+  on: jest.fn(),
+  off: jest.fn(),
+  getZoom: () => mockCamera.zoom,
+  getPitch: () => mockCamera.pitch,
+  getBearing: () => mockCamera.bearing,
+  getCenter: () => ({ lng: mockCamera.lng, lat: mockCamera.lat }),
+};
+
+jest.mock("lucide-react", () => ({
+  ZoomOut: () => <svg data-testid="zoom-out-icon" />,
+}));
+
 jest.mock("react-map-gl/maplibre", () => ({
+  useMap: () => ({ current: mockMap }),
   Marker: ({
     children,
     latitude,
@@ -165,6 +186,82 @@ describe("ApprovedIncidentMarkers", () => {
       fireEvent.click(screen.getByTestId("marker"));
       expect(screen.getByText(expectedLabels[i])).toBeInTheDocument();
       unmount();
+    });
+  });
+
+  it("flies down to the pin at street level when it's clicked", () => {
+    mockMap.flyTo.mockClear();
+    render(
+      <ApprovedIncidentMarkers
+        incidents={[makeIncident({ location: { lat: 40.7608, lng: -111.891 } })]}
+      />
+    );
+    fireEvent.click(screen.getByTestId("marker"));
+    expect(mockMap.flyTo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        center: [-111.891, 40.7608],
+        zoom: 17,
+        pitch: TILTED_PITCH,
+      })
+    );
+  });
+
+  describe("zoom out button", () => {
+    beforeEach(() => {
+      mockMap.flyTo.mockClear();
+      Object.assign(mockCamera, { lng: -111.9, lat: 40.7, zoom: 12.5, pitch: 0, bearing: 0 });
+    });
+
+    it("is hidden until a pin is clicked", () => {
+      render(<ApprovedIncidentMarkers incidents={[makeIncident()]} />);
+      expect(screen.queryByRole("button", { name: "Zoom out" })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("marker"));
+      expect(screen.getByRole("button", { name: "Zoom out" })).toBeInTheDocument();
+    });
+
+    it("flies back to where the visitor was before clicking, and closes the popup", () => {
+      render(<ApprovedIncidentMarkers incidents={[makeIncident()]} />);
+      fireEvent.click(screen.getByTestId("marker"));
+      fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+
+      expect(mockMap.flyTo).toHaveBeenLastCalledWith(
+        expect.objectContaining({ center: [-111.9, 40.7], zoom: 12.5, pitch: 0, bearing: 0 })
+      );
+      expect(screen.queryByTestId("popup")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Zoom out" })).not.toBeInTheDocument();
+    });
+
+    it("keeps the original view when hopping between pins", () => {
+      render(
+        <ApprovedIncidentMarkers
+          incidents={[makeIncident({ id: "a" }), makeIncident({ id: "b" })]}
+        />
+      );
+      const [first, second] = screen.getAllByTestId("marker");
+      fireEvent.click(first);
+      // Now down at street level next to the first pin.
+      Object.assign(mockCamera, { zoom: 17, pitch: 55 });
+      fireEvent.click(second);
+      fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+
+      expect(mockMap.flyTo).toHaveBeenLastCalledWith(
+        expect.objectContaining({ center: [-111.9, 40.7], zoom: 12.5 })
+      );
+    });
+
+    it("pulls out to the flat city view if the visitor was already at street level", () => {
+      Object.assign(mockCamera, { zoom: 16.5, pitch: 55, bearing: -17 });
+      render(
+        <ApprovedIncidentMarkers
+          incidents={[makeIncident({ location: { lat: 40.75, lng: -111.88 } })]}
+        />
+      );
+      fireEvent.click(screen.getByTestId("marker"));
+      fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+
+      expect(mockMap.flyTo).toHaveBeenLastCalledWith(
+        expect.objectContaining({ center: [-111.88, 40.75], zoom: 13, pitch: 0, bearing: 0 })
+      );
     });
   });
 });
