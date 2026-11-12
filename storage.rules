@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// Media attached to incident reports by the WeNav mobile app.
+//
+// Files live at incidentMedia/{uid}/{incidentId}/{file}. The incident document
+// in Firestore stores only these paths (never download URLs), so access is
+// always decided here: the reporter and admins can open a file, nobody else.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.get('admin', false) == true;
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isAllowedUpload() {
+      return (request.resource.contentType.matches('image/(jpeg|png|heic)')
+          && request.resource.size < 10 * 1024 * 1024)
+        || (request.resource.contentType.matches('video/(mp4|quicktime)')
+          && request.resource.size < 100 * 1024 * 1024);
+    }
+
+    match /incidentMedia/{uid}/{incidentId}/{fileName} {
+      allow read: if isOwner(uid) || isAdmin();
+      // Uploaded files are evidence for review, so they cannot be swapped out
+      // once written. An upload over an existing object is evaluated as a
+      // create, so `resource == null` is what actually blocks overwrites.
+      allow create: if isOwner(uid) && resource == null && isAllowedUpload();
+      allow update: if false;
+      // The app deletes its own uploads if the report itself fails to save.
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+  }
+}

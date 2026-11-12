@@ -660,4 +660,97 @@ describe("WeNav Firestore security rules", () => {
     await assertFails(getDoc(doc(userDb, "pairingCodes/ABC234")));
     await assertFails(getDoc(doc(adminDb, "pairingCodes/ABC234")));
   });
+
+  describe("incident attachments", () => {
+    const attachment = (uid: string, incidentId: string, n = 0) => ({
+      path: `incidentMedia/${uid}/${incidentId}/${n}.jpg`,
+      kind: "image",
+      contentType: "image/jpeg",
+    });
+
+    test("a user can attach up to three of their own uploads", async () => {
+      const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+      await assertSucceeds(
+        setDoc(doc(userDb, "incidents/incident-1"), {
+          ...validIncident("user-1"),
+          attachments: [
+            attachment("user-1", "incident-1", 0),
+            {
+              path: "incidentMedia/user-1/incident-1/1.mov",
+              kind: "video",
+              contentType: "video/quicktime",
+            },
+            attachment("user-1", "incident-1", 2),
+          ],
+        }),
+      );
+    });
+
+    test("a user cannot attach more than three files", async () => {
+      const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+      await assertFails(
+        setDoc(doc(userDb, "incidents/incident-1"), {
+          ...validIncident("user-1"),
+          attachments: [0, 1, 2, 3].map((n) =>
+            attachment("user-1", "incident-1", n),
+          ),
+        }),
+      );
+    });
+
+    test("a user cannot reference another user's media", async () => {
+      const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+      await assertFails(
+        setDoc(doc(userDb, "incidents/incident-1"), {
+          ...validIncident("user-1"),
+          attachments: [attachment("user-2", "incident-1")],
+        }),
+      );
+    });
+
+    test("a user cannot reference media from a different incident", async () => {
+      const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+      await assertFails(
+        setDoc(doc(userDb, "incidents/incident-1"), {
+          ...validIncident("user-1"),
+          attachments: [attachment("user-1", "incident-9")],
+        }),
+      );
+    });
+
+    test("an attachment's content type must match its kind", async () => {
+      const userDb = testEnv.authenticatedContext("user-1").firestore();
+
+      await assertFails(
+        setDoc(doc(userDb, "incidents/incident-1"), {
+          ...validIncident("user-1"),
+          attachments: [
+            { ...attachment("user-1", "incident-1"), kind: "video" },
+          ],
+        }),
+      );
+    });
+
+    test("an admin review cannot change attachments", async () => {
+      await seed("incidents/incident-1", {
+        ...validIncident("user-1"),
+        attachments: [attachment("user-1", "incident-1")],
+      });
+      const adminDb = testEnv
+        .authenticatedContext("admin-1", { admin: true })
+        .firestore();
+
+      await assertFails(
+        updateDoc(doc(adminDb, "incidents/incident-1"), {
+          status: "approved",
+          attachments: [],
+          lastUpdated: serverTimestamp(),
+        }),
+      );
+    });
+  });
 });

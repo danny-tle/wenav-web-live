@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Search, ChevronDown, ChevronUp, ChevronRight, Image as ImageIcon, Play } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
+import { getDownloadURL, ref } from "firebase/storage";
 import { subscribeToIncidents, updateIncidentStatus } from "@/lib/firestore";
-import { Incident } from "@/lib/types";
+import { storage } from "@/lib/firebase";
+import { Incident, IncidentAttachment } from "@/lib/types";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
@@ -19,6 +21,7 @@ interface MockIncident {
   status: "In-process" | "Completed" | "Rejected";
   lastUpdated: string;
   verificationNote: string;
+  attachments?: IncidentAttachment[];
 }
 
 const MOCK_INCIDENTS: MockIncident[] = [
@@ -87,7 +90,84 @@ function firestoreToDisplay(inc: Incident): MockIncident {
     status: inc.status === "approved" ? "Completed" : inc.status === "not_confirmed" ? "Rejected" : "In-process",
     lastUpdated: inc.lastUpdated ?? "",
     verificationNote: inc.verificationNote ?? "",
+    attachments: inc.attachments ?? [],
   };
+}
+
+type ResolvedMedia = IncidentAttachment & { url: string | null };
+
+/**
+ * Photos and videos the reporter attached. Incidents store Storage paths, not
+ * URLs, so each one is resolved here — storage.rules only lets admins and the
+ * reporter read them. Only mounted for the expanded row, so collapsed rows
+ * cost nothing.
+ */
+function IncidentMedia({ attachments }: { attachments: IncidentAttachment[] }) {
+  const [media, setMedia] = useState<ResolvedMedia[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      attachments.map(async (a) => {
+        try {
+          return { ...a, url: await getDownloadURL(ref(storage, a.path)) };
+        } catch (err) {
+          console.error("Failed to load incident media:", a.path, err);
+          return { ...a, url: null };
+        }
+      }),
+    ).then((resolved) => {
+      if (!cancelled) setMedia(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [attachments]);
+
+  if (attachments.length === 0) {
+    return (
+      <div>
+        <p className="text-xs text-gray-400 mb-2">Photos &amp; video</p>
+        <p className="text-sm text-gray-500">No photos or video attached.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-xs text-gray-400 mb-2">Photos &amp; video</p>
+      <div className="flex flex-wrap gap-2">
+        {(media ?? attachments.map((a) => ({ ...a, url: undefined }))).map((m, i) => {
+          const box = "w-40 h-28 rounded-lg bg-gray-200 overflow-hidden flex items-center justify-center";
+          if (m.url === undefined) {
+            return <div key={m.path} className={`${box} animate-pulse`} />;
+          }
+          if (m.url === null) {
+            return (
+              <div key={m.path} className={`${box} text-xs text-gray-500 text-center px-2`}>
+                Could not load {m.kind === "video" ? "video" : "photo"}
+              </div>
+            );
+          }
+          return m.kind === "video" ? (
+            <video
+              key={m.path}
+              src={m.url}
+              controls
+              preload="metadata"
+              className={`${box} object-cover bg-black`}
+              aria-label={`Video ${i + 1}`}
+            />
+          ) : (
+            <a key={m.path} href={m.url} target="_blank" rel="noreferrer" className={box}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- short-lived Storage URL, not a static asset */}
+              <img src={m.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function AdminIncidentsPage() {
@@ -255,30 +335,7 @@ export default function AdminIncidentsPage() {
                     </button>
                   </div>
 
-                  <div className="flex gap-8">
-                    {/* Media */}
-                    <div>
-                      <p className="text-xs text-gray-400 mb-2">Media</p>
-                      <div className="w-40 h-28 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <Play size={28} className="text-gray-400" />
-                      </div>
-                    </div>
-
-                    {/* Photos */}
-                    <div>
-                      <p className="text-xs text-gray-400 mb-2">Photos</p>
-                      <div className="flex gap-2">
-                        {[1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className="w-28 h-28 bg-gray-200 rounded-lg flex items-center justify-center"
-                          >
-                            <ImageIcon size={24} className="text-gray-400" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <IncidentMedia attachments={incident.attachments ?? []} />
                 </div>
               )}
             </div>

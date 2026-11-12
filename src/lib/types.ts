@@ -3,6 +3,17 @@ export interface Coordinate {
   lng: number;
 }
 
+/**
+ * A photo or video attached to a report by the mobile app. `path` is a
+ * Firebase Storage path (never a download URL); resolve it with
+ * `getDownloadURL` — storage.rules lets only the reporter and admins read it.
+ */
+export interface IncidentAttachment {
+  path: string;
+  kind: "image" | "video";
+  contentType: string;
+}
+
 export interface Incident {
   id: string;
   type:
@@ -19,6 +30,7 @@ export interface Incident {
   reportedBy: string;
   verificationNote?: string;
   lastUpdated?: string;
+  attachments?: IncidentAttachment[];
 }
 
 export interface PublicIncident {

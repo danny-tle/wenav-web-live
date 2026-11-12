@@ -1,7 +1,7 @@
 import type { Config } from "jest";
 
 const config: Config = {
-  displayName: "firestore-rules",
+  displayName: "security-rules",
   testEnvironment: "node",
   testMatch: ["<rootDir>/firestore-tests/**/*.test.ts"],
   transform: {

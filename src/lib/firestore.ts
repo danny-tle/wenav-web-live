@@ -18,6 +18,7 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "@/lib/firebase";
 import {
   Incident,
+  IncidentAttachment,
   Coordinate,
   PublicIncident,
   UserProfile,
@@ -68,6 +69,9 @@ function docToIncident(id: string, data: Record<string, any>): Incident {
     reportedBy: data.reportedBy ?? "",
     verificationNote: data.verificationNote ?? "",
     lastUpdated: formatTimestampShort(data.lastUpdated as Timestamp),
+    attachments: Array.isArray(data.attachments)
+      ? (data.attachments as IncidentAttachment[])
+      : [],
   };
 }
 

@@ -59,7 +59,8 @@ service cloud.firestore {
           'reportedBy',
           'reportedAt',
           'lastUpdated',
-          'verificationNote'
+          'verificationNote',
+          'attachments'
         ])
         && isIncidentType(data.type)
         && isIncidentStatus(data.status)
@@ -77,8 +78,37 @@ service cloud.firestore {
             && data.verificationNote.size() <= 2000));
     }
 
-    function isValidIncidentCreate() {
+    // Photos and videos attached by the reporter. Each entry points at a file
+    // the reporter uploaded under incidentMedia/{uid}/{incidentId}/ (see
+    // storage.rules), so a report cannot reference someone else's media.
+    // Rules have no loops, so the cap of 3 is checked entry by entry.
+    function isValidAttachment(a, incidentId) {
+      return a is map
+        && a.keys().hasAll(['path', 'kind', 'contentType'])
+        && a.keys().hasOnly(['path', 'kind', 'contentType'])
+        && a.kind in ['image', 'video']
+        && a.contentType is string
+        && a.contentType.matches(a.kind + '/[a-z0-9.+-]+')
+        && a.path is string
+        && a.path.matches('incidentMedia/' + request.auth.uid + '/'
+          + incidentId + '/[^/]{1,100}');
+    }
+
+    function hasValidAttachments(data, incidentId) {
+      return !('attachments' in data)
+        || (data.attachments is list
+          && data.attachments.size() <= 3
+          && (data.attachments.size() < 1
+            || isValidAttachment(data.attachments[0], incidentId))
+          && (data.attachments.size() < 2
+            || isValidAttachment(data.attachments[1], incidentId))
+          && (data.attachments.size() < 3
+            || isValidAttachment(data.attachments[2], incidentId)));
+    }
+
+    function isValidIncidentCreate(incidentId) {
       return hasValidIncidentShape(request.resource.data)
+        && hasValidAttachments(request.resource.data, incidentId)
         && request.resource.data.reportedBy == request.auth.uid
         && request.resource.data.reportedAt == request.time
         && request.resource.data.lastUpdated == request.time
@@ -149,7 +179,7 @@ service cloud.firestore {
         && (resource.data.reportedBy == request.auth.uid || isAdmin());
       allow list: if isSignedIn()
         && (resource.data.reportedBy == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isValidIncidentCreate();
+      allow create: if isSignedIn() && isValidIncidentCreate(incidentId);
       allow update: if isAdmin() && isValidAdminReview();
       allow delete: if isAdmin();
     }
