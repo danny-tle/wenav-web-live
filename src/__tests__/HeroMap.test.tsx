@@ -18,6 +18,12 @@ jest.mock("@/lib/firestore", () => ({
     mockSubscribeToPublicIncidents(args[0] as (i: unknown[]) => void),
 }));
 
+// The tour invite needs auth; it has its own tests.
+jest.mock("@/components/landing/TourInvite", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 // Stub next/dynamic so MapWrapper renders as a lightweight element
 jest.mock("next/dynamic", () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -176,6 +182,22 @@ describe("HeroMap search bar", () => {
     expect(
       screen.queryByText("Salt Lake County, Utah, United States")
     ).not.toBeInTheDocument();
+  });
+
+  it("doesn't search again (and reopen the list) after a result is picked", async () => {
+    mockFetchWith(mockResults);
+    const user = setupUser();
+    render(<HeroMap />);
+    const input = screen.getByPlaceholderText("Search for locations...");
+
+    await user.type(input, "Salt");
+    act(() => jest.advanceTimersByTime(500));
+    await waitFor(() => screen.getByText("Salt Lake City, Utah, United States"));
+    fireEvent.click(screen.getByText("Salt Lake City, Utah, United States"));
+
+    act(() => jest.advanceTimersByTime(1000));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Salt Lake County, Utah, United States")).not.toBeInTheDocument();
   });
 
   it("clear button removes the query text and hides the dropdown", async () => {

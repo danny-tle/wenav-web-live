@@ -19,25 +19,30 @@ import {
 import NotificationPanel from "@/components/shared/NotificationPanel";
 import { useAuth } from "@/lib/auth";
 
+/** `key` names each page for the first-run tour ("nav-my-users"). */
 const NAV_ITEMS = [
   {
     label: "Dashboard",
     href: "/dashboard",
+    key: "dashboard",
     icon: LayoutDashboard,
   },
   {
     label: "My Users",
     href: "/dashboard/my-users",
+    key: "my-users",
     icon: Users,
   },
   {
     label: "View Incidents",
     href: "/dashboard/incidents",
+    key: "incidents",
     icon: FileText,
   },
   {
     label: "Settings",
     href: "/dashboard/settings",
+    key: "settings",
     icon: Settings,
   },
 ];
@@ -213,7 +218,7 @@ const handleLogout = async () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3">
+        <nav data-tour="nav" className="flex-1 p-3">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -223,6 +228,7 @@ const handleLogout = async () => {
                 key={item.href}
                 href={item.href}
                 onClick={closeIfPhone}
+                data-tour={`nav-${item.key}`}
                 title={!isOpen ? item.label : undefined}
                 className={`mb-1 flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors ${
                   isOpen
@@ -299,6 +305,7 @@ const handleLogout = async () => {
 
       {/* Phone bottom tab bar */}
       <nav
+        data-tour="nav"
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-[980] flex border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
       >
@@ -310,6 +317,7 @@ const handleLogout = async () => {
               key={item.href}
               href={item.href}
               onClick={closeIfPhone}
+              data-tour={`nav-${item.key}`}
               aria-current={isActive ? "page" : undefined}
               className={`flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium ${
                 isActive ? "text-wenav-purple" : "text-gray-500"

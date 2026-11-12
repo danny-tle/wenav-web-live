@@ -223,6 +223,7 @@ export default function IncidentsPage() {
             <button
               type="button"
               onClick={openModal}
+              data-tour="report-incident"
               className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-wenav bg-wenav-purple px-3 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 md:px-4"
             >
               <Plus size={16} />
@@ -231,7 +232,7 @@ export default function IncidentsPage() {
           </div>
 
           {/* Search and filters */}
-          <div className="mb-4 flex flex-col gap-3 md:mb-6 md:flex-row">
+          <div data-tour="incident-filters" className="mb-4 flex flex-col gap-3 md:mb-6 md:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search
                 size={17}
@@ -474,7 +475,7 @@ export default function IncidentsPage() {
             {/*  header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-wenav-dark">Report Incident</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={closeModal} data-tour-close aria-label="Close" className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X size={20} />
               </button>
             </div>

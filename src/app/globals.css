@@ -66,3 +66,17 @@ body {
     transform: none;
   }
 }
+
+/* First-run tour: a ring that ripples out from whatever the step wants the
+   caregiver to try. */
+@keyframes tour-pulse {
+  0%,
+  100% {
+    outline: 2px solid rgb(167 139 250 / 90%);
+    outline-offset: 2px;
+  }
+  50% {
+    outline: 2px solid rgb(167 139 250 / 0%);
+    outline-offset: 12px;
+  }
+}

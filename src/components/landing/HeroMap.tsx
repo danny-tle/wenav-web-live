@@ -8,6 +8,9 @@ import { subscribeToPublicIncidents } from "@/lib/firestore";
 import { PublicIncident } from "@/lib/types";
 import { HERO_GLOBE_STYLE } from "@/lib/mapStyle";
 import { MAP_DEFAULTS } from "@/lib/constants";
+import TourInvite from "@/components/landing/TourInvite";
+import { useHomeTour } from "@/components/landing/HomeTour";
+import { tourSignal } from "@/lib/tourSignal";
 import {
   INTRO_START_CENTER,
   INTRO_START_ZOOM,
@@ -51,6 +54,12 @@ interface NominatimResult {
 export default function HeroMap() {
   const { phase, start: startIntro, skip: skipIntro } = useGlobeIntro();
   const introPlaying = phase !== "done";
+
+  // Someone started the tour (from the navbar) mid-intro: get to the map.
+  const { active: tourActive } = useHomeTour();
+  useEffect(() => {
+    if (tourActive && introPlaying) skipIntro();
+  }, [tourActive, introPlaying, skipIntro]);
   const [map, setMap] = useState<MaplibreMap | null>(null);
   const handleMapLoad = useCallback(
     (loaded: MaplibreMap) => {
@@ -72,6 +81,10 @@ export default function HeroMap() {
     return unsub;
   }, []);
 
+  // The place just picked from the results. Picking one fills the box with
+  // its name, which shouldn't kick off a fresh search and reopen the list.
+  const pickedQuery = useRef<string | null>(null);
+
   // Debounced geocoding search via Nominatim
   useEffect(() => {
     if (query.trim().length < 3) {
@@ -79,6 +92,7 @@ export default function HeroMap() {
       setShowDropdown(false);
       return;
     }
+    if (query === pickedQuery.current) return;
 
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -112,9 +126,11 @@ export default function HeroMap() {
   }, []);
 
   function handleSelect(result: NominatimResult) {
+    pickedQuery.current = result.display_name;
     setQuery(result.display_name);
     setFlyToLocation([parseFloat(result.lat), parseFloat(result.lon)]);
     setShowDropdown(false);
+    tourSignal("search-picked");
   }
 
   function handleClear() {
@@ -124,7 +140,7 @@ export default function HeroMap() {
   }
 
   return (
-    <section id="home" className="relative w-full h-[100vh] pt-16 bg-[#030712]">
+    <section id="home" data-tour="home-map" className="relative w-full h-[100vh] pt-16 bg-[#030712]">
       <div aria-hidden="true" className="hero-starfield pointer-events-none absolute inset-0" />
       <MapWrapper
         scrollWheelZoom={true}
@@ -174,6 +190,7 @@ export default function HeroMap() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={dropdownRef}
+            data-tour="home-search"
             className={`w-[420px] ml-10 ${introPlaying ? "pointer-events-none" : "pointer-events-auto"}`}
           >
             <div className="flex items-center bg-white rounded-wenav px-4 py-3 border border-gray-200 shadow-sm">
@@ -213,6 +230,8 @@ export default function HeroMap() {
           </div>
         </div>
       </div>
+      {/* Once the intro's done, offer logged-out visitors a tour of the map. */}
+      <TourInvite ready={!introPlaying} />
     </section>
   );
 }

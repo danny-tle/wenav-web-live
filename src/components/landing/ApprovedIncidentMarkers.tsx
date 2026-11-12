@@ -7,6 +7,7 @@ import { Incident, PublicIncident } from "@/lib/types";
 import { prefersReducedMotion, useMapCamera } from "@/lib/useMapCamera";
 import { MAP_DEFAULTS } from "@/lib/constants";
 import { TILT_ZOOM_THRESHOLD } from "@/lib/mapStyle";
+import { tourSignal } from "@/lib/tourSignal";
 
 /** A camera position to come back to. */
 interface CameraView {
@@ -69,12 +70,14 @@ export default function ApprovedIncidentMarkers({ incidents }: { incidents: Publ
       );
     }
     flyToLocation(inc.location.lat, inc.location.lng);
+    tourSignal("pin-opened");
   }
 
   function zoomOut() {
     if (!map || !returnView) return;
     setOpenId(null);
     setReturnView(null);
+    tourSignal("zoomed-out");
     if (prefersReducedMotion()) {
       map.jumpTo(returnView);
       return;
@@ -135,6 +138,7 @@ export default function ApprovedIncidentMarkers({ incidents }: { incidents: Publ
           <button
             type="button"
             onClick={zoomOut}
+            data-tour="home-zoom-out"
             className="pointer-events-auto flex items-center gap-2 rounded-full bg-wenav-dark px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-wenav-dark/85"
           >
             <ZoomOut size={16} aria-hidden="true" />
