@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Card from "@/components/shared/Card";
+import { useOnboarding } from "@/components/onboarding/OnboardingProvider";
 
 export default function SettingsPage() {
   const { user, role, logout, updateName, changePassword } = useAuth();
   const router = useRouter();
+  const { startTour } = useOnboarding();
   const [name, setName] = useState(user?.displayName || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -123,6 +125,23 @@ export default function SettingsPage() {
             ))}
           </div>
         </Card>
+
+        {/* Tour */}
+        <div data-tour="settings-tour">
+        <Card>
+          <h2 className="font-semibold text-wenav-dark mb-1">Getting started</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            A one-minute walkthrough of connecting, the map and incident reports.
+          </p>
+          <button
+            type="button"
+            onClick={startTour}
+            className="px-4 py-2 bg-wenav-gray text-wenav-dark text-sm font-medium rounded-wenav hover:bg-gray-200 transition-colors"
+          >
+            Take the tour again
+          </button>
+        </Card>
+        </div>
 
         {/* Account actions */}
         <Card>

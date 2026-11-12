@@ -6,10 +6,12 @@ import Link from "next/link";
 import { NAV_LINKS } from "@/lib/constants";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useHomeTour } from "@/components/landing/HomeTour";
 
 export default function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isLoggedIn, isLoading, role } = useAuth();
+  const { start: startTour } = useHomeTour();
 
   const myPageHref = role === "admin" ? "/admin" : "/dashboard";
 
@@ -42,10 +44,20 @@ export default function LandingNavbar() {
           </div>
 
           {/* Login button / My Page button*/}
-          <div className="hidden md:block">
+          <div className="hidden md:flex md:items-center md:gap-2">
+            {!isLoading && !isLoggedIn && (
+              <button
+                type="button"
+                onClick={startTour}
+                className="px-4 py-2 text-sm font-semibold text-wenav-purple rounded-wenav hover:bg-wenav-purple/10 transition-colors"
+              >
+                Take the tour
+              </button>
+            )}
             {!isLoading && (
               <Link
                 href={isLoggedIn ? myPageHref : "/login"}
+                data-tour="home-account"
                 className="px-5 py-2 bg-wenav-dark text-white text-sm font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors"
               >
               {isLoggedIn ? "My Page":"Login"}
@@ -56,6 +68,8 @@ export default function LandingNavbar() {
           {/* Mobile hamburger */}
           <button
             className="md:hidden p-2"
+            // On phones the Login button lives behind this menu.
+            data-tour="home-account"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -77,6 +91,18 @@ export default function LandingNavbar() {
               {link.label}
             </a>
           ))}
+          {!isLoading && !isLoggedIn && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                startTour();
+              }}
+              className="block w-full mt-3 px-5 py-2.5 text-wenav-purple text-sm font-semibold rounded-wenav text-center border border-wenav-purple/30"
+            >
+              Take the tour
+            </button>
+          )}
           <Link
             href="/login"
             className="block mt-3 px-5 py-2.5 bg-wenav-dark text-white text-sm font-semibold rounded-wenav text-center"

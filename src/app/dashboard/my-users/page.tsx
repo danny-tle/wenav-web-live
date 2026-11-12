@@ -13,6 +13,8 @@ import {
 } from "@/lib/firestore";
 import { useAuth } from "@/lib/auth";
 import { PAIRING_CODE_LENGTH, pairingMessageFor } from "@/lib/pairing";
+import { useOnboarding } from "@/components/onboarding/OnboardingProvider";
+import { DEMO_PERSON_ID, DEMO_ROUTE, demoPerson } from "@/components/onboarding/demoData";
 
 const MapWrapper = dynamic(() => import("@/components/shared/MapWrapper"), {
   ssr: false,
@@ -42,13 +44,22 @@ export default function MyUsersPage() {
     return subscribeToTrackedUsers(caregiver.uid, setLiveUsers);
   }, [caregiver]);
 
+  // During the hands-on tour, give a brand-new caregiver someone to click.
+  const { tourActive } = useOnboarding();
+  const showExamples = tourActive;
+  const example = useMemo(() => demoPerson(), []);
+  const listedUsers = useMemo(
+    () => (showExamples && liveUsers.length === 0 ? [example] : liveUsers),
+    [showExamples, liveUsers, example]
+  );
+
   const users = useMemo(
     () =>
-      liveUsers.map((liveUser) => ({
+      listedUsers.map((liveUser) => ({
         ...liveUser,
         ...(profileEdits[liveUser.id] ?? {}),
       })),
-    [liveUsers, profileEdits]
+    [listedUsers, profileEdits]
   );
 
   // Select the first person once the list arrives, and drop the selection if
@@ -81,6 +92,11 @@ export default function MyUsersPage() {
   useEffect(() => {
     setSelectedRoute([]);
     if (!selectedUserId) return;
+    // The tour's example person has a pretend walk and nothing in Firestore.
+    if (selectedUserId === DEMO_PERSON_ID) {
+      setSelectedRoute(DEMO_ROUTE);
+      return;
+    }
     return subscribeToUserTrack(selectedUserId, setSelectedRoute);
   }, [selectedUserId]);
 
@@ -148,7 +164,7 @@ export default function MyUsersPage() {
           details floating over it. */}
       <div className="flex min-h-[400px] flex-1 flex-col overflow-y-auto md:flex-row md:overflow-visible">
         {/* User list panel */}
-        <div className="flex w-full flex-shrink-0 flex-col border-b border-gray-100 bg-white md:w-72 md:border-b-0">
+        <div data-tour="my-users-list" className="flex w-full flex-shrink-0 flex-col border-b border-gray-100 bg-white md:w-72 md:border-b-0">
           {/* Header */}
           <div className="border-b border-gray-100 p-4">
             <div className="flex items-center justify-between">
@@ -159,6 +175,9 @@ export default function MyUsersPage() {
               <button
                 type="button"
                 onClick={() => setShowPairing(true)}
+                data-tour="add-user"
+                aria-label="Add user"
+                title="Add user"
                 className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-wenav-purple transition-colors hover:bg-wenav-purple/10"
               >
                 <Plus size={18} />
@@ -287,6 +306,7 @@ export default function MyUsersPage() {
               </h2>
               <button
                 onClick={closePairing}
+                data-tour-close
                 className="p-1 hover:bg-wenav-gray rounded-lg"
                 aria-label="Close"
               >
