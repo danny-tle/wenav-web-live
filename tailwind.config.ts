@@ -10,6 +10,8 @@ const config: Config = {
     extend: {
       colors: {
         "wenav-purple": "#5C00F2",
+        // Brighter purple from the 2026 landing page redesign.
+        "wenav-violet": "#7524FD",
         "wenav-dark": "#0D0D0D",
         "wenav-gray": "#F2F2F7",
         "wenav-teal": "#00BCD4",

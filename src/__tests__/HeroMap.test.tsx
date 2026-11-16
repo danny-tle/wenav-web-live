@@ -24,6 +24,12 @@ jest.mock("@/components/landing/TourInvite", () => ({
   default: () => null,
 }));
 
+// The map's tour button needs auth too.
+jest.mock("@/components/landing/MapTourButton", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 // Stub next/dynamic so MapWrapper renders as a lightweight element
 jest.mock("next/dynamic", () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

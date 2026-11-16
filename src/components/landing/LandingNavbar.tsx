@@ -6,37 +6,35 @@ import Link from "next/link";
 import { NAV_LINKS } from "@/lib/constants";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useHomeTour } from "@/components/landing/HomeTour";
 
 export default function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isLoggedIn, isLoading, role } = useAuth();
-  const { start: startTour } = useHomeTour();
 
   const myPageHref = role === "admin" ? "/admin" : "/dashboard";
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[2000] bg-white/90 backdrop-blur-sm border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <nav className="fixed top-0 left-0 right-0 z-[2000] bg-white border-b border-gray-100">
+      <div className="px-4 sm:px-6 lg:px-[6%]">
+        <div className="flex items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <Image
               src="/assets/logo.png"
               alt="WeNav"
-              width={111}
-              height={44}
+              width={96}
+              height={38}
               priority
             />
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-8 xl:gap-10 ml-12 xl:ml-[90px]">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="text-sm font-medium text-gray-600 hover:text-wenav-dark transition-colors"
+                className="text-[15px] text-wenav-dark hover:text-wenav-violet transition-colors"
               >
                 {link.label}
               </a>
@@ -44,21 +42,12 @@ export default function LandingNavbar() {
           </div>
 
           {/* Login button / My Page button*/}
-          <div className="hidden md:flex md:items-center md:gap-2">
-            {!isLoading && !isLoggedIn && (
-              <button
-                type="button"
-                onClick={startTour}
-                className="px-4 py-2 text-sm font-semibold text-wenav-purple rounded-wenav hover:bg-wenav-purple/10 transition-colors"
-              >
-                Take the tour
-              </button>
-            )}
+          <div className="hidden lg:flex lg:items-center lg:gap-2 ml-auto">
             {!isLoading && (
               <Link
                 href={isLoggedIn ? myPageHref : "/login"}
                 data-tour="home-account"
-                className="px-5 py-2 bg-wenav-dark text-white text-sm font-semibold rounded-wenav hover:bg-wenav-dark/90 transition-colors"
+                className="px-5 py-1.5 bg-wenav-dark text-white text-[15px] font-medium rounded-full hover:bg-wenav-dark/85 transition-colors"
               >
               {isLoggedIn ? "My Page":"Login"}
               </Link>
@@ -67,7 +56,7 @@ export default function LandingNavbar() {
 
           {/* Mobile hamburger */}
           <button
-            className="md:hidden p-2"
+            className="lg:hidden p-2 ml-auto"
             // On phones the Login button lives behind this menu.
             data-tour="home-account"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -80,32 +69,20 @@ export default function LandingNavbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4">
+        <div className="lg:hidden bg-white border-t border-gray-100 px-4 pb-4">
           {NAV_LINKS.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="block py-3 text-sm font-medium text-gray-600 hover:text-wenav-dark"
+              className="block py-3 text-[15px] text-wenav-dark hover:text-wenav-violet"
               onClick={() => setMobileOpen(false)}
             >
               {link.label}
             </a>
           ))}
-          {!isLoading && !isLoggedIn && (
-            <button
-              type="button"
-              onClick={() => {
-                setMobileOpen(false);
-                startTour();
-              }}
-              className="block w-full mt-3 px-5 py-2.5 text-wenav-purple text-sm font-semibold rounded-wenav text-center border border-wenav-purple/30"
-            >
-              Take the tour
-            </button>
-          )}
           <Link
             href="/login"
-            className="block mt-3 px-5 py-2.5 bg-wenav-dark text-white text-sm font-semibold rounded-wenav text-center"
+            className="block mt-3 px-5 py-2.5 bg-wenav-dark text-white text-[15px] font-medium rounded-full text-center"
           >
             Login
           </Link>

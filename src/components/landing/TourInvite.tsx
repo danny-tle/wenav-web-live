@@ -30,7 +30,7 @@ function rememberAnswer(answer: "yes" | "no") {
 /**
  * Asks logged-out visitors whether they'd like a quick, hands-on tour of the
  * homepage map. Yes starts it right here; No puts the question away. Either
- * way we don't ask again. "Take the tour" in the navbar stays for anyone who
+ * way we don't ask again. "Take the tour" on the map stays for anyone who
  * changes their mind.
  */
 export default function TourInvite({ ready = true }: {

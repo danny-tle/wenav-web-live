@@ -15,7 +15,7 @@ const HomeTourContext = createContext<HomeTourValue>({ start: () => {}, active: 
 
 /**
  * Runs the visitors' hands-on tour of the homepage map. Visitors opt in, from
- * the invite card or the navbar's "Take the tour"; it's never forced on them.
+ * the invite card or the "Take the tour" button on the map; it's never forced on them.
  */
 export function HomeTourProvider({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState<number | null>(null);

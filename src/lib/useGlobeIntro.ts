@@ -13,6 +13,7 @@ import { prefersReducedMotion } from "@/lib/useMapCamera";
  *  - space:  globe spinning round to North America
  *  - city:   dropped into Salt Lake City on the flat incident map
  *  - street: tilted down into the 3D buildings view
+ *  - city:   (again) pulled back out to the flat overview
  *  - done:   the visitor has the controls
  */
 export type IntroPhase = "idle" | "space" | "city" | "street" | "done";
@@ -31,10 +32,13 @@ const HOME: [number, number] = [MAP_DEFAULTS.center[1], MAP_DEFAULTS.center[0]];
  */
 const SPIN_END: [number, number] = [HOME[0] + 18, HOME[1] - 14];
 
-/** The flat city overview — also where reduced-motion visitors start. */
-const CITY_VIEW = { center: HOME, zoom: MAP_DEFAULTS.zoom, pitch: 0, bearing: 0 };
+/**
+ * The flat city overview. The intro ends here (so visitors land on the whole
+ * map, not one corner of it), and reduced-motion visitors start here.
+ */
+export const CITY_VIEW = { center: HOME, zoom: MAP_DEFAULTS.zoom, pitch: 0, bearing: 0 };
 
-/** The tilted 3D street view the intro ends on. */
+/** The tilted 3D street view the intro dips into before pulling back out. */
 export const STREET_VIEW = {
   center: HOME,
   zoom: 16.5,
@@ -42,7 +46,7 @@ export const STREET_VIEW = {
   bearing: -17,
 };
 
-/** Durations (ms). Tuned so the whole intro runs ~14s. */
+/** Durations (ms). Tuned so the whole intro runs ~18s. */
 const TIMING = {
   /** Max wait for the first tiles before spinning anyway. */
   firstPaint: 1500,
@@ -50,6 +54,8 @@ const TIMING = {
   flyIn: 4500,
   cityHold: 1600,
   tilt: 3200,
+  streetHold: 1200,
+  pullBack: 3000,
   /** If the map never loads (no WebGL, etc.), give the page back after this. */
   loadTimeout: 8000,
 };
@@ -185,6 +191,13 @@ export function useGlobeIntro() {
         await animate(map, signal, () =>
           map.flyTo({ ...STREET_VIEW, duration: TIMING.tilt, curve: 1.2, essential: true })
         );
+        await wait(TIMING.streetHold, signal);
+
+        // Back out to the overview, so the visitor starts with the whole map.
+        setPhase("city");
+        await animate(map, signal, () =>
+          map.flyTo({ ...CITY_VIEW, duration: TIMING.pullBack, curve: 1.2, essential: true })
+        );
 
         setPhase("done");
       } catch (err) {
@@ -199,7 +212,7 @@ export function useGlobeIntro() {
   /** Jump straight to where the intro would have ended. */
   const skip = useCallback(() => {
     finish();
-    mapRef.current?.jumpTo(STREET_VIEW);
+    mapRef.current?.jumpTo(CITY_VIEW);
   }, [finish]);
 
   // Never hold the search bar hostage to a map that won't load.

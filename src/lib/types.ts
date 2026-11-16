@@ -156,7 +156,17 @@ export interface HighRiskArea {
 export interface TeamMember {
   name: string;
   role: string;
-  avatar: string;
+  bio: string;
+  /** Omit to show the placeholder portrait. */
+  avatar?: string;
+  email?: string;
+  /** Without the protocol, e.g. "linkedin.com/in/someone". */
+  linkedin?: string;
+}
+
+export interface TutorialStep {
+  title: string;
+  description: string;
 }
 
 export interface Feature {

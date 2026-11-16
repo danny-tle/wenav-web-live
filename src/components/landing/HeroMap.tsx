@@ -9,6 +9,7 @@ import { PublicIncident } from "@/lib/types";
 import { HERO_GLOBE_STYLE } from "@/lib/mapStyle";
 import { MAP_DEFAULTS } from "@/lib/constants";
 import TourInvite from "@/components/landing/TourInvite";
+import MapTourButton from "@/components/landing/MapTourButton";
 import { useHomeTour } from "@/components/landing/HomeTour";
 import { tourSignal } from "@/lib/tourSignal";
 import {
@@ -76,13 +77,82 @@ export default function HeroMap() {
   const [incidents, setIncidents] = useState<PublicIncident[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const sectionRef = useRef<HTMLElement>(null);
+  const [mapEngaged, setMapEngaged] = useState(false);
+  const mapLive = mapEngaged || tourActive;
+  const [showZoomHint, setShowZoomHint] = useState(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (!map) return;
+
+    const touchScreen =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
+    if (mapLive) {
+      map.scrollZoom.enable();
+      map.dragPan.enable();
+      map.touchZoomRotate.enable();
+    } else {
+      map.scrollZoom.disable();
+      if (touchScreen) {
+        map.dragPan.disable();
+        map.touchZoomRotate.disable();
+      }
+    }
+  }, [map, mapLive]);
+
+  // Sleep again on a click outside the map or once it's mostly scrolled away.
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (!section!.contains(e.target as Node)) setMapEngaged(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    let observer: IntersectionObserver | undefined;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.intersectionRatio < 0.4) setMapEngaged(false);
+        },
+        { threshold: [0.4] }
+      );
+      observer.observe(section);
+    }
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      observer?.disconnect();
+    };
+  }, []);
+
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
+
+  function handleWheel() {
+    if (mapLive || introPlaying) return;
+    setShowZoomHint(true);
+    clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setShowZoomHint(false), 1500);
+  }
+
+  function engageMap() {
+    setMapEngaged(true);
+    setShowZoomHint(false);
+  }
+
+  function engageIfOnMap(target: EventTarget) {
+    const el = target as Element;
+    if (el.closest?.(".maplibregl-map") || dropdownRef.current?.contains(el)) {
+      engageMap();
+    }
+  }
+
   useEffect(() => {
     const unsub = subscribeToPublicIncidents(setIncidents);
     return unsub;
   }, []);
 
-  // The place just picked from the results. Picking one fills the box with
-  // its name, which shouldn't kick off a fresh search and reopen the list.
+
   const pickedQuery = useRef<string | null>(null);
 
   // Debounced geocoding search via Nominatim
@@ -130,6 +200,7 @@ export default function HeroMap() {
     setQuery(result.display_name);
     setFlyToLocation([parseFloat(result.lat), parseFloat(result.lon)]);
     setShowDropdown(false);
+    engageMap();
     tourSignal("search-picked");
   }
 
@@ -140,16 +211,30 @@ export default function HeroMap() {
   }
 
   return (
-    <section id="home" data-tour="home-map" className="relative w-full h-[100vh] pt-16 bg-[#030712]">
+    <section
+      ref={sectionRef}
+      id="home"
+      data-tour="home-map"
+      className="relative w-full h-[100vh] pt-16 bg-[#030712]"
+      // A mouse press wakes the map straight away, so the same press can
+      // drag. A tap only counts once it's a tap (not the start of a scroll).
+      onPointerDownCapture={(e) => {
+        if (e.pointerType === "mouse") engageIfOnMap(e.target);
+      }}
+      onClickCapture={(e) => engageIfOnMap(e.target)}
+      onMouseLeave={() => setMapEngaged(false)}
+      onWheel={handleWheel}
+    >
       <div aria-hidden="true" className="hero-starfield pointer-events-none absolute inset-0" />
       <MapWrapper
-        scrollWheelZoom={true}
+        scrollWheelZoom={false}
         className="relative z-10 h-full w-full"
         flyToLocation={flyToLocation}
         mapStyle={HERO_GLOBE_STYLE}
         center={INTRO_START_CENTER}
         zoom={INTRO_START_ZOOM}
         onLoad={handleMapLoad}
+        rounded={false}
       >
         {/* HTML markers float over the globe even when they're on its far
             side, so hold the pins back until we've landed on the city. */}
@@ -181,17 +266,32 @@ export default function HeroMap() {
         </div>
       )}
 
+      {/* Shown when someone scrolls over the map before clicking it. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 z-[900] flex items-center justify-center transition-opacity duration-300 ${
+          showZoomHint ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <span className="rounded-full bg-black/65 px-5 py-2.5 text-sm font-medium text-white backdrop-blur">
+          Click the map to zoom and explore
+        </span>
+      </div>
+
       {/* Search bar overlay */}
       <div
         className={`absolute top-20 left-0 right-0 z-[1000] pointer-events-none transition-opacity duration-500 ${
           introPlaying ? "opacity-0" : "opacity-100"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Same side padding as the navbar, so the bar's right edge lines up
+            with the Login button. Map zoom controls sit top-left, so on narrow
+            screens the bar leaves them room. */}
+        <div className="px-4 sm:px-6 lg:px-[6%]">
           <div
             ref={dropdownRef}
             data-tour="home-search"
-            className={`w-[420px] ml-10 ${introPlaying ? "pointer-events-none" : "pointer-events-auto"}`}
+            className={`ml-auto w-[min(420px,calc(100%-3.5rem))] ${introPlaying ? "pointer-events-none" : "pointer-events-auto"}`}
           >
             <div className="flex items-center bg-white rounded-wenav px-4 py-3 border border-gray-200 shadow-sm">
               <Search size={18} className="text-gray-400 mr-3 flex-shrink-0" />
@@ -228,10 +328,36 @@ export default function HeroMap() {
               </div>
             )}
           </div>
+          {/* The tour teaches the map, so it lives with the map's main control. */}
+          <div className="ml-auto mt-2 flex w-[min(420px,calc(100%-3.5rem))] justify-end">
+            <MapTourButton ready={!introPlaying} />
+          </div>
         </div>
       </div>
       {/* Once the intro's done, offer logged-out visitors a tour of the map. */}
       <TourInvite ready={!introPlaying} />
+      {/* Bottom-left: a cue that the page keeps going. Lined up with the
+          navbar logo (same side padding), and on the same baseline and text
+          size as MapLibre's map credit in the bottom-right corner. */}
+      <div
+        className={`pointer-events-none absolute bottom-[10px] left-0 z-[1000] flex h-6 items-center px-4 sm:px-6 lg:px-[6%] transition-opacity duration-500 ${
+          introPlaying ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <a
+          href="#content"
+          tabIndex={introPlaying ? -1 : 0}
+          className={`group inline-flex h-6 items-center gap-4 text-[12px] font-medium uppercase leading-none tracking-[0.3em] text-wenav-dark/80 hover:text-wenav-dark transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-wenav-violet ${
+            introPlaying ? "" : "pointer-events-auto"
+          }`}
+        >
+          Scroll
+          <span
+            aria-hidden="true"
+            className="block h-px w-16 bg-current transition-[width] duration-300 group-hover:w-24 motion-reduce:transition-none"
+          />
+        </a>
+      </div>
     </section>
   );
 }

@@ -4,6 +4,11 @@
 
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* Keep in-page links (#about, #tutorial, ...) from landing under the fixed navbar. */
+html {
+  scroll-padding-top: 4rem;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #0d0d0d;
@@ -79,4 +84,14 @@ body {
     outline: 2px solid rgb(167 139 250 / 0%);
     outline-offset: 12px;
   }
+}
+
+/* Homepage map: let the map credit sit directly on the map, without MapLibre's
+   white pill, so it pairs with the "Scroll" cue in the opposite corner. The
+   credit itself stays visible and readable, as the map data licenses require. */
+#home .maplibregl-ctrl.maplibregl-ctrl-attrib,
+#home .maplibregl-ctrl-attrib.maplibregl-compact,
+#home .maplibregl-ctrl-attrib-button,
+#home .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button {
+  background-color: transparent;
 }

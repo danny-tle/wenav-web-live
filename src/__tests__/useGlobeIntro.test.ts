@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { Map as MaplibreMap } from "maplibre-gl";
-import { STREET_VIEW, useGlobeIntro } from "@/lib/useGlobeIntro";
+import { CITY_VIEW, STREET_VIEW, useGlobeIntro } from "@/lib/useGlobeIntro";
 import { MAP_DEFAULTS } from "@/lib/constants";
 import { TILTED_PITCH } from "@/lib/mapStyle";
 
@@ -67,7 +67,7 @@ afterEach(() => {
 });
 
 describe("useGlobeIntro", () => {
-  it("spins the globe, lands on the flat city map, then tilts into 3D", async () => {
+  it("spins the globe, lands on the city, tilts into 3D, then pulls back to the overview", async () => {
     const map = makeFakeMap();
     const { result } = renderHook(() => useGlobeIntro());
     expect(result.current.phase).toBe("idle");
@@ -99,6 +99,16 @@ describe("useGlobeIntro", () => {
     expect(map.flyTo).toHaveBeenLastCalledWith(
       expect.objectContaining({ pitch: TILTED_PITCH, zoom: STREET_VIEW.zoom })
     );
+    expect(result.current.phase).toBe("street");
+
+    // Hold on the street view, then pull back out to the flat overview.
+    await act(async () => {
+      jest.advanceTimersByTime(1500);
+    });
+    await flush();
+    expect(map.flyTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ...CITY_VIEW, pitch: 0 })
+    );
     expect(result.current.phase).toBe("done");
   });
 
@@ -123,7 +133,7 @@ describe("useGlobeIntro", () => {
     expect(map.flyTo).not.toHaveBeenCalled();
   });
 
-  it("skip jumps straight to the final street view", async () => {
+  it("skip jumps straight to the city overview the intro ends on", async () => {
     const map = makeFakeMap({ holdMoves: true });
     const { result } = renderHook(() => useGlobeIntro());
 
@@ -134,7 +144,7 @@ describe("useGlobeIntro", () => {
     act(() => result.current.skip());
     await flush();
 
-    expect(map.jumpTo).toHaveBeenCalledWith(STREET_VIEW);
+    expect(map.jumpTo).toHaveBeenCalledWith(CITY_VIEW);
     expect(result.current.phase).toBe("done");
   });
 

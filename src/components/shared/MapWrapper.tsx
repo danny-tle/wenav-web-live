@@ -66,6 +66,8 @@ interface MapWrapperProps {
   mapStyle?: StyleSpecification;
   /** Called once the style has loaded, with the underlying MapLibre map. */
   onLoad?: (map: MaplibreMap) => void;
+  /** Round the map's corners. Turn off for edge-to-edge maps like the homepage. */
+  rounded?: boolean;
 }
 
 /**
@@ -98,6 +100,7 @@ export default function MapWrapper({
   historyPoints = [],
   mapStyle = MAP_STYLE,
   onLoad,
+  rounded = true,
 }: MapWrapperProps) {
   const mapRef = useRef<MapRef>(null);
   const { flyToLocation: flyTo, syncPitchToZoom } = useMapCamera(mapRef);
@@ -162,7 +165,7 @@ export default function MapWrapper({
 
   return (
     <div className={className}>
-      <div className="w-full h-full rounded-wenav overflow-hidden">
+      <div className={`w-full h-full overflow-hidden ${rounded ? "rounded-wenav" : ""}`}>
         <MapGL
           ref={mapRef}
           initialViewState={{
