@@ -32,6 +32,8 @@ interface Options {
   interval?: number;
   /** Length of the slide animation, in ms. */
   duration?: number;
+  /** Stop auto-advancing, e.g. while the carousel is folded away. */
+  paused?: boolean;
 }
 
 /**
@@ -48,7 +50,7 @@ interface Options {
  */
 export function useLoopingCarousel(
   count: number,
-  { interval = 2000, duration = 500 }: Options = {},
+  { interval = 2000, duration = 500, paused: pausedByCaller = false }: Options = {},
 ) {
   const trackRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
@@ -141,7 +143,8 @@ export function useLoopingCarousel(
     return () => document.removeEventListener("visibilitychange", update);
   }, []);
 
-  const paused = hovered || focused || pageHidden || reducedMotion;
+  const paused =
+    hovered || focused || pageHidden || reducedMotion || pausedByCaller;
 
   useEffect(() => {
     if (paused || count < 2) return;
@@ -160,7 +163,12 @@ export function useLoopingCarousel(
   const pauseProps = {
     onMouseEnter: () => setHovered(true),
     onMouseLeave: () => setHovered(false),
-    onFocus: () => setFocused(true),
+    // Only keyboard focus pauses: a mouse click on a button inside also
+    // focuses it, and that shouldn't freeze the carousel.
+    onFocus: (e: FocusEvent<HTMLElement>) => {
+      const target = e.target as Element;
+      if (target.matches?.(":focus-visible")) setFocused(true);
+    },
     onBlur: (e: FocusEvent<HTMLElement>) => {
       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
         setFocused(false);

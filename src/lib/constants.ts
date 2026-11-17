@@ -28,8 +28,9 @@ export const TEAM_MEMBERS: TeamMember[] = [
       "Adobe Creative Consultant, supporting student creativity through workshops and community events. With a Google UX " +
       "Design Professional Certificate, Teresa is interested in making complex technology more accessible through " +
       "thoughtful, user-centered design.",
+    avatar: "/assets/team/teresa.jpg",
     email: "u1426363@utah.edu",
-    linkedin: "linkedin.com/in/teresapark",
+    linkedin: "linkedin.com/in/parkteresa/",
   },
   {
     name: "Danny Le",
@@ -60,7 +61,9 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     name: "Ethan Nguyen",
     role: "Mobile/Web Engineer",
+    avatar: "/assets/team/ethan.jpg",
     bio: "[to be updated]",
+    email: "edn42102@gmail.com",
     linkedin: "linkedin.com/in/ethan-nguyen-421-",
   },
 ];

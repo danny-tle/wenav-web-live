@@ -1,15 +1,23 @@
 "use client";
 
+import { useId, useState } from "react";
 import Image from "next/image";
 import { FEATURES } from "@/lib/constants";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useLoopingCarousel } from "./useLoopingCarousel";
 
 export default function FeaturesSection() {
-  const carousel = useLoopingCarousel(FEATURES.length, { interval: 2000 });
+  // The button beside the heading folds the cards away and opens them again,
+  // like the walker/caregiver groups in the Tutorial section.
+  const [open, setOpen] = useState(true);
+  const panelId = useId();
+  const carousel = useLoopingCarousel(FEATURES.length, {
+    interval: 2000,
+    paused: !open,
+  });
 
   return (
-    <section id="features" className="py-20 lg:py-24 bg-[#f7f6fb]">
+    <section id="features" className="py-16 lg:py-[100px] bg-[#f7f6fb]">
       <div
         {...carousel.pauseProps}
         role="region"
@@ -17,7 +25,9 @@ export default function FeaturesSection() {
         aria-label="Features"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-start justify-between gap-6 mb-12 lg:mb-16">
+          <div
+            className={`flex items-start justify-between gap-6 ${open ? "mb-12 lg:mb-16" : ""}`}
+          >
             <div>
               <h2 className="text-3xl sm:text-[32px] font-medium text-wenav-dark mb-4">
                 Features
@@ -29,14 +39,21 @@ export default function FeaturesSection() {
 
             <button
               type="button"
-              onClick={carousel.next}
-              className="shrink-0 mt-12 p-2 rounded-full bg-black/10 text-wenav-dark hover:bg-black/15 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wenav-violet"
-              aria-label="Next feature"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              aria-controls={panelId}
+              aria-label={open ? "Hide features" : "Show features"}
+              className="shrink-0 mt-12 p-2.5 rounded-full bg-black/10 text-wenav-dark hover:bg-black/15 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wenav-violet"
             >
-              <ChevronRight size={22} strokeWidth={1.5} />
+              <ChevronDown
+                size={22}
+                strokeWidth={1.5}
+                aria-hidden="true"
+                className={`transition-transform duration-200 motion-reduce:transition-none ${open ? "" : "-rotate-90"}`}
+              />
             </button>
           </div>
-          <div className="overflow-hidden">
+          <div id={panelId} hidden={!open} className="overflow-hidden">
             <div
               ref={carousel.trackRef}
               className="relative flex gap-5 will-change-transform"

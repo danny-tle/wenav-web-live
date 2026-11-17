@@ -4,7 +4,7 @@ import Image from "next/image";
 // link pointing at the first section under the map.
 export default function IntroSection() {
   return (
-    <section id="content" className="bg-white py-20 lg:py-32">
+    <section id="content" className="bg-white py-16 lg:py-[100px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         <div>
           <p className="text-wenav-violet text-lg mb-2">WeNav</p>

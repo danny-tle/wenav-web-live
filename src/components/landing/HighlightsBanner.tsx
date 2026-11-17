@@ -1,7 +1,7 @@
 import Image from "next/image";
 
-const ICON =
-  "shrink-0 w-11 h-11 sm:w-14 sm:h-14 lg:w-[72px] lg:h-[72px] object-contain";
+// Sized in em so each icon tracks the headline's font size at every breakpoint.
+const ICON = "shrink-0 h-[0.85em] w-auto";
 
 export default function HighlightsBanner() {
   return (
@@ -13,15 +13,15 @@ export default function HighlightsBanner() {
         <ul className="space-y-1 text-white font-semibold tracking-tight text-[34px] sm:text-5xl lg:text-[64px] leading-[1.3]">
           <li className="flex items-center gap-4 lg:gap-12">
             Detect Hazards.
-            <Image src="/assets/icon_detect_eye.png" alt="" width={72} height={72} className={ICON} />
+            <Image src="/assets/icon_detect_eye.png" alt="" width={225} height={207} className={ICON} />
           </li>
           <li className="flex items-center gap-4 lg:gap-12 lg:pl-4">
-            <Image src="/assets/icon_alert_bell.png" alt="" width={72} height={72} className={ICON} />
+            <Image src="/assets/icon_alert_bell.png" alt="" width={221} height={221} className={ICON} />
             Real-Time Alerts.
           </li>
           <li className="flex items-center gap-4 lg:gap-12">
             Safer Navigation.
-            <Image src="/assets/icon_safe_shield.png" alt="" width={72} height={72} className={ICON} />
+            <Image src="/assets/icon_safe_shield.png" alt="" width={206} height={229} className={ICON} />
           </li>
         </ul>
       </div>

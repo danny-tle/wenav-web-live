@@ -65,7 +65,7 @@ export default function TeamSection() {
   const count = TEAM_MEMBERS.length;
 
   return (
-    <section id="team" className="py-20 lg:py-28 bg-white">
+    <section id="team" className="py-16 lg:py-[100px] bg-white">
       <div
         {...carousel.pauseProps}
         role="region"

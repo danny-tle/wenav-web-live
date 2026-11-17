@@ -8,7 +8,7 @@ const DIAGRAM_DESCRIPTION =
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="bg-[#f7f6fb] pb-20 lg:pb-28">
+    <section id="how-it-works" className="bg-[#f7f6fb] py-16 lg:py-[100px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl sm:text-[32px] font-medium text-wenav-dark mb-8">
           How it works

@@ -102,7 +102,7 @@ function StepGroup({
 
 export default function TutorialSection() {
   return (
-    <section id="tutorial" className="bg-white py-20 lg:py-28">
+    <section id="tutorial" className="bg-white py-16 lg:py-[100px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl sm:text-[32px] font-medium text-wenav-dark mb-8">
           Tutorial: How to use WeNav

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function DownloadSection() {
   return (
-    <section id="download" className="py-20 bg-white">
+    <section id="download" className="py-16 lg:py-[100px] bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl sm:text-[44px] font-medium text-black tracking-tight mb-12">
           Navigate safer. Stay connected.

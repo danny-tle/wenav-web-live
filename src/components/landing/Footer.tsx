@@ -43,7 +43,7 @@ export default function Footer() {
           <div className="flex gap-16 sm:gap-24 lg:gap-32">
             
             <div>
-              <h3 className="text-cyan-400 text-[18px] mb-8">Pages</h3>
+              <h3 className="text-wenav-violet text-[18px] mb-8">Pages</h3>
               <ul className="space-y-3 text-[18px]">
                 <li>
                   <a href="#home" className="hover:opacity-80 transition-opacity">
@@ -69,7 +69,7 @@ export default function Footer() {
             </div>
 
             <div>
-              <h3 className="text-cyan-400 text-[18px] mb-8">Download App</h3>
+              <h3 className="text-wenav-violet text-[18px] mb-8">Download App</h3>
               <ul className="space-y-3 text-[18px]">
                 <li>
                   <a href="#" className="hover:opacity-80 transition-opacity">
