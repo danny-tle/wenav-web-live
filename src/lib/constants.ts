@@ -28,7 +28,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
       "Adobe Creative Consultant, supporting student creativity through workshops and community events. With a Google UX " +
       "Design Professional Certificate, Teresa is interested in making complex technology more accessible through " +
       "thoughtful, user-centered design.",
-    avatar: "/assets/team/teresa.jpg",
+    avatar: "/assets/team/teresa.JPG",
     email: "u1426363@utah.edu",
     linkedin: "linkedin.com/in/parkteresa/",
   },
