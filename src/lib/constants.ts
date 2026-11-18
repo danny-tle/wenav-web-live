@@ -62,7 +62,17 @@ export const TEAM_MEMBERS: TeamMember[] = [
     name: "Ethan Nguyen",
     role: "Mobile/Web Engineer",
     avatar: "/assets/team/ethan.jpg",
-    bio: "[to be updated]",
+    bio: "I am Ethan Nguyen, a Computer Science student at the University of Utah, expecting to graduate in December 2026 with a " +
+    "Bachelor's degree in Computer Science. My interests include software engineering, full-stack web development, mobile " +
+    "application development, and building practical solutions to real-world problems. For my senior capstone project, I am " +
+    "working on We-Nav, a web and mobile application. This project has given me the opportunity to apply my technical knowledge " +
+    "in a collaborative environment while strengthening my skills in software development, problem-solving, and teamwork. I am also " +
+    "currently interning at SAPA Investment Group, where I have been involved in developing websites for Fat Fish and Dragonfly " +
+    "Processing. These projects have allowed me to gain hands-on experience with modern web technologies, including Next.js, " +
+    "Firebase, Firestore, and Vercel, while working on real-world applications. Outside of my internship and academic work, I " + 
+    "have taken on freelance development projects, including creating an e-commerce website for Elliott and Me. These experiences " +
+    "have strengthened my interest in creating user-friendly applications and expanding my skills as a developer. After graduation, " +
+    "I hope to pursue a career in software engineering, where I can continue learning and developing meaningful technology.",
     email: "edn42102@gmail.com",
     linkedin: "linkedin.com/in/ethan-nguyen-421-",
   },
